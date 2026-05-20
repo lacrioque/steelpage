@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "steelpage",
+  "project_id": "075de263-c2e1-4995-9003-1ad80149dcd1"
+}
