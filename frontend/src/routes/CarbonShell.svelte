@@ -121,10 +121,22 @@
     };
   });
 
-  // Route guard: if not signed in and reads are gated, push to /login.
-  // /forgot, /reset and /verify must stay reachable without a session —
-  // operators who can't sign in are exactly the ones who need them.
-  $: if (
+  // Route guards.
+  //
+  // 1. /admin and /account always require a session — don't even render the
+  //    view to anonymous visitors. Showing a half-functional page that 401s
+  //    every API call is a worse UX than a clean bounce to /login.
+  // 2. /admin additionally requires role=admin. Authenticated non-admins
+  //    land on the doc root, which is where they actually have access.
+  // 3. Doc reads: only push to /login when the server actually requires
+  //    auth to read. /forgot, /reset and /verify stay reachable without
+  //    a session — operators who can't sign in are exactly the ones who
+  //    need them.
+  $: if (caps && $me === null && ($routeKind === "admin" || $routeKind === "account")) {
+    navigateToLogin();
+  } else if (caps && $me && $routeKind === "admin" && $me.role !== "admin") {
+    navigateToDoc("README.md");
+  } else if (
     caps &&
     !caps.allow_anonymous_read &&
     $me === null &&
