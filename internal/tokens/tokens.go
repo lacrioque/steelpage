@@ -252,10 +252,10 @@ type rowScanner interface {
 
 func scan(row rowScanner) (*Token, error) {
 	var (
-		t           Token
-		scopesRaw   string
-		expires     sql.NullString
-		lastUsed    sql.NullString
+		t         Token
+		scopesRaw string
+		expires   sql.NullString
+		lastUsed  sql.NullString
 	)
 	if err := row.Scan(&t.ID, &t.UserID, &t.Name, &scopesRaw, &expires, &lastUsed, &t.CreatedAt); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {

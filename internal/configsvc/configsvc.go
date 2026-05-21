@@ -21,13 +21,13 @@ var (
 // AuditEntry mirrors a row in config_audit; secrets are redacted before
 // they ever leave the package.
 type AuditEntry struct {
-	ID            int64   `json:"id"`
-	ActorUserID   *int64  `json:"actor_user_id"`
-	ActorDisplay  *string `json:"actor_display,omitempty"`
-	Key           string  `json:"key"`
-	OldValue      *string `json:"old_value"`
-	NewValue      *string `json:"new_value"`
-	At            string  `json:"at"`
+	ID           int64   `json:"id"`
+	ActorUserID  *int64  `json:"actor_user_id"`
+	ActorDisplay *string `json:"actor_display,omitempty"`
+	Key          string  `json:"key"`
+	OldValue     *string `json:"old_value"`
+	NewValue     *string `json:"new_value"`
+	At           string  `json:"at"`
 }
 
 type listener struct {

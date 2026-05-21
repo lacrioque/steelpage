@@ -10,11 +10,11 @@ import (
 // Handler returns an http.Handler that serves the SPA build from the given
 // filesystem. The caller embeds the directory and hands the root in.
 //
-// - Files that exist in the FS are served directly with correct MIME types.
-// - SPA deep-link routes (paths that don't resolve to a file) fall back to
-//   index.html so the client router can pick them up.
-// - If index.html is missing (no production build yet), a placeholder page
-//   explains how to build the frontend; the rest of the server keeps working.
+//   - Files that exist in the FS are served directly with correct MIME types.
+//   - SPA deep-link routes (paths that don't resolve to a file) fall back to
+//     index.html so the client router can pick them up.
+//   - If index.html is missing (no production build yet), a placeholder page
+//     explains how to build the frontend; the rest of the server keeps working.
 func Handler(root fs.FS) http.Handler {
 	if _, err := fs.Stat(root, "index.html"); err != nil {
 		return placeholder("Steelpage frontend not built yet — run `cd frontend && npm run build` (or `make build`), or start Vite for development.")

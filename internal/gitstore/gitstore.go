@@ -34,14 +34,14 @@ type SyncResult struct {
 
 // Status is a snapshot of repo state used by the admin UI.
 type Status struct {
-	Remote            string      `json:"remote"`
-	HasRemote         bool        `json:"has_remote"`
-	Branch            string      `json:"branch"`
-	Ahead             int         `json:"ahead"`
-	Behind            int         `json:"behind"`
-	RebaseInProgress  bool        `json:"rebase_in_progress"`
-	ConflictFiles     []string    `json:"conflict_files,omitempty"`
-	LastSync          *SyncResult `json:"last_sync,omitempty"`
+	Remote           string      `json:"remote"`
+	HasRemote        bool        `json:"has_remote"`
+	Branch           string      `json:"branch"`
+	Ahead            int         `json:"ahead"`
+	Behind           int         `json:"behind"`
+	RebaseInProgress bool        `json:"rebase_in_progress"`
+	ConflictFiles    []string    `json:"conflict_files,omitempty"`
+	LastSync         *SyncResult `json:"last_sync,omitempty"`
 }
 
 func New(repoPath string) *Store {

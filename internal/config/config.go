@@ -37,15 +37,15 @@ type DB struct {
 }
 
 type Auth struct {
-	Mode               string         `yaml:"mode"`
-	AllowAnonymousRead bool           `yaml:"allow_anonymous_read"`
-	LocalEnabled       bool           `yaml:"local_enabled"`
-	Session            AuthSession    `yaml:"session"`
-	OIDC               AuthOIDC       `yaml:"oidc"`
+	Mode               string      `yaml:"mode"`
+	AllowAnonymousRead bool        `yaml:"allow_anonymous_read"`
+	LocalEnabled       bool        `yaml:"local_enabled"`
+	Session            AuthSession `yaml:"session"`
+	OIDC               AuthOIDC    `yaml:"oidc"`
 }
 
 type AuthSession struct {
-	Secure   bool   `yaml:"secure"`
+	Secure    bool   `yaml:"secure"`
 	CookieKey string `yaml:"cookie_key"`
 }
 
@@ -81,7 +81,7 @@ type Email struct {
 	Port               int    `yaml:"port"`
 	Username           string `yaml:"username"`
 	Password           string `yaml:"password"`
-	Encryption         string `yaml:"encryption"`           // "none" | "starttls" | "tls"
+	Encryption         string `yaml:"encryption"` // "none" | "starttls" | "tls"
 	FromAddress        string `yaml:"from_address"`
 	FromName           string `yaml:"from_name"`
 	ReplyTo            string `yaml:"reply_to"`

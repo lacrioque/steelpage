@@ -27,9 +27,9 @@ const (
 )
 
 type setupStartResponse struct {
-	Secret    string `json:"secret"`
+	Secret     string `json:"secret"`
 	OtpauthURL string `json:"otpauth_url"`
-	QRPng     string `json:"qr_png"` // data:image/png;base64,…
+	QRPng      string `json:"qr_png"` // data:image/png;base64,…
 }
 
 // MFASetupStart generates a fresh TOTP secret (replacing any existing pending

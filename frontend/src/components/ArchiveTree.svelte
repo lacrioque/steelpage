@@ -240,7 +240,9 @@
     padding: 1rem 0.75rem;
     border-right: 1px solid #ded8cc;
     overflow-y: auto;
+    overflow-x: hidden;
     background: rgba(255, 255, 255, 0.5);
+    height: 100%;
   }
   .archive-tree header {
     display: flex;

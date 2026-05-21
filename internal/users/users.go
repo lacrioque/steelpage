@@ -14,12 +14,12 @@ const (
 )
 
 var (
-	ErrInvalidName   = errors.New("display name must be 1-64 characters")
-	ErrInvalidEmail  = errors.New("email must be 3-254 characters and contain '@'")
-	ErrInvalidRole   = errors.New("role must be 'admin' or 'user'")
-	ErrNotFound      = errors.New("user not found")
-	ErrEmailTaken    = errors.New("email already registered")
-	ErrOIDCMismatch  = errors.New("email is already linked to a different identity provider account")
+	ErrInvalidName  = errors.New("display name must be 1-64 characters")
+	ErrInvalidEmail = errors.New("email must be 3-254 characters and contain '@'")
+	ErrInvalidRole  = errors.New("role must be 'admin' or 'user'")
+	ErrNotFound     = errors.New("user not found")
+	ErrEmailTaken   = errors.New("email already registered")
+	ErrOIDCMismatch = errors.New("email is already linked to a different identity provider account")
 )
 
 // User is the canonical identity. Pointer fields are NULL-friendly.

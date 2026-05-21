@@ -19,13 +19,13 @@ import (
 // frontend's per-field component selection.
 type Field struct {
 	Key       string   `json:"key"`
-	Type      string   `json:"type"`              // "string" | "int" | "bool" | "enum" | "string_slice"
-	Enum      []string `json:"enum,omitempty"`    // for type=enum
-	Sensitive bool     `json:"sensitive"`         // hidden in responses, write-only
-	ReadOnly  bool     `json:"read_only"`         // YAML-only (restart-required, or not yet wired for live reload)
-	Group     string   `json:"group"`             // UI grouping
-	Order     int      `json:"order"`             // sort order within group
-	Min       *int     `json:"min,omitempty"`     // int validators
+	Type      string   `json:"type"`           // "string" | "int" | "bool" | "enum" | "string_slice"
+	Enum      []string `json:"enum,omitempty"` // for type=enum
+	Sensitive bool     `json:"sensitive"`      // hidden in responses, write-only
+	ReadOnly  bool     `json:"read_only"`      // YAML-only (restart-required, or not yet wired for live reload)
+	Group     string   `json:"group"`          // UI grouping
+	Order     int      `json:"order"`          // sort order within group
+	Min       *int     `json:"min,omitempty"`  // int validators
 	Max       *int     `json:"max,omitempty"`
 
 	// applyTo writes the (already-validated) value into the given config.
@@ -46,22 +46,26 @@ var allFields = []Field{
 	// Repo — per-request reads, no subsystem reload needed.
 	{
 		Key: "repo.commit_author_name", Type: "string", Group: "Repo", Order: 10,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Repo.CommitAuthorName) },
+		applyTo: func(cfg *config.Config, v json.RawMessage) error {
+			return json.Unmarshal(v, &cfg.Repo.CommitAuthorName)
+		},
 		currentValue: func(cfg *config.Config) any { return cfg.Repo.CommitAuthorName },
 	},
 	{
 		Key: "repo.commit_author_email", Type: "string", Group: "Repo", Order: 11,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Repo.CommitAuthorEmail) },
+		applyTo: func(cfg *config.Config, v json.RawMessage) error {
+			return json.Unmarshal(v, &cfg.Repo.CommitAuthorEmail)
+		},
 		currentValue: func(cfg *config.Config) any { return cfg.Repo.CommitAuthorEmail },
 	},
 	{
 		Key: "repo.auto_push", Type: "bool", Group: "Repo", Order: 20,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Repo.AutoPush) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Repo.AutoPush) },
 		currentValue: func(cfg *config.Config) any { return cfg.Repo.AutoPush },
 	},
 	{
 		Key: "repo.push_remote", Type: "string", Group: "Repo", Order: 21,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Repo.PushRemote) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Repo.PushRemote) },
 		currentValue: func(cfg *config.Config) any { return cfg.Repo.PushRemote },
 	},
 	{Key: "repo.path", Type: "string", Group: "Repo", Order: 1, ReadOnly: true,
@@ -72,7 +76,7 @@ var allFields = []Field{
 	// Server — base_url editable (used for outgoing email links), the rest read-only.
 	{
 		Key: "server.base_url", Type: "string", Group: "Server", Order: 10,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Server.BaseURL) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Server.BaseURL) },
 		currentValue: func(cfg *config.Config) any { return cfg.Server.BaseURL },
 	},
 	{Key: "server.bind", Type: "string", Group: "Server", Order: 1, ReadOnly: true,
@@ -87,12 +91,14 @@ var allFields = []Field{
 	// Auth flags — read on every authorize() call, so live-editable safely.
 	{
 		Key: "auth.allow_anonymous_read", Type: "bool", Group: "Auth", Order: 10,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Auth.AllowAnonymousRead) },
+		applyTo: func(cfg *config.Config, v json.RawMessage) error {
+			return json.Unmarshal(v, &cfg.Auth.AllowAnonymousRead)
+		},
 		currentValue: func(cfg *config.Config) any { return cfg.Auth.AllowAnonymousRead },
 	},
 	{
 		Key: "auth.local_enabled", Type: "bool", Group: "Auth", Order: 11,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Auth.LocalEnabled) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Auth.LocalEnabled) },
 		currentValue: func(cfg *config.Config) any { return cfg.Auth.LocalEnabled },
 	},
 	{Key: "auth.mode", Type: "string", Group: "Auth", Order: 1, ReadOnly: true,
@@ -131,54 +137,56 @@ var allFields = []Field{
 	// Search — single string for now.
 	{
 		Key: "search.engine", Type: "string", Group: "Search", Order: 1,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Search.Engine) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Search.Engine) },
 		currentValue: func(cfg *config.Config) any { return cfg.Search.Engine },
 	},
 
 	// Email — full hot-reload via the mailer subsystem subscriber.
 	{
 		Key: "email.host", Type: "string", Group: "Email", Order: 1,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.Host) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.Host) },
 		currentValue: func(cfg *config.Config) any { return cfg.Email.Host },
 	},
 	{
 		Key: "email.port", Type: "int", Group: "Email", Order: 2, Min: intPtr(0), Max: intPtr(65535),
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.Port) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.Port) },
 		currentValue: func(cfg *config.Config) any { return cfg.Email.Port },
 	},
 	{
 		Key: "email.encryption", Type: "enum", Enum: []string{"none", "starttls", "tls"}, Group: "Email", Order: 3,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.Encryption) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.Encryption) },
 		currentValue: func(cfg *config.Config) any { return cfg.Email.Encryption },
 	},
 	{
 		Key: "email.username", Type: "string", Group: "Email", Order: 4,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.Username) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.Username) },
 		currentValue: func(cfg *config.Config) any { return cfg.Email.Username },
 	},
 	{
 		Key: "email.password", Type: "string", Group: "Email", Order: 5, Sensitive: true,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.Password) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.Password) },
 		currentValue: func(cfg *config.Config) any { return cfg.Email.Password },
 	},
 	{
 		Key: "email.from_address", Type: "string", Group: "Email", Order: 6,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.FromAddress) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.FromAddress) },
 		currentValue: func(cfg *config.Config) any { return cfg.Email.FromAddress },
 	},
 	{
 		Key: "email.from_name", Type: "string", Group: "Email", Order: 7,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.FromName) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.FromName) },
 		currentValue: func(cfg *config.Config) any { return cfg.Email.FromName },
 	},
 	{
 		Key: "email.reply_to", Type: "string", Group: "Email", Order: 8,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.ReplyTo) },
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.ReplyTo) },
 		currentValue: func(cfg *config.Config) any { return cfg.Email.ReplyTo },
 	},
 	{
 		Key: "email.insecure_skip_verify", Type: "bool", Group: "Email", Order: 9,
-		applyTo: func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.Email.InsecureSkipVerify) },
+		applyTo: func(cfg *config.Config, v json.RawMessage) error {
+			return json.Unmarshal(v, &cfg.Email.InsecureSkipVerify)
+		},
 		currentValue: func(cfg *config.Config) any { return cfg.Email.InsecureSkipVerify },
 	},
 }

@@ -15,9 +15,9 @@ import (
 //   - When at least one permission rule matches `path`, only those rules
 //     decide: user gets allowed iff some matching rule grants ≥ action.
 //   - When no rule matches `path`, defaults apply:
-//       read    → honor cfg.Auth.AllowAnonymousRead
-//       comment → require an authenticated user
-//       write   → require an authenticated user
+//     read    → honor cfg.Auth.AllowAnonymousRead
+//     comment → require an authenticated user
+//     write   → require an authenticated user
 //
 // Returns the user (may be nil), and the HTTP status to write on denial. A
 // status of 0 means "allowed".

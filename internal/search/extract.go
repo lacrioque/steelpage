@@ -6,11 +6,11 @@ import (
 )
 
 var (
-	headingRE     = regexp.MustCompile(`(?m)^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$`)
-	fencedCodeRE  = regexp.MustCompile("(?ms)^[ \\t]{0,3}```[\\w-]*[ \\t]*\\r?\\n.*?\\r?\\n[ \\t]{0,3}```[ \\t]*$")
+	headingRE      = regexp.MustCompile(`(?m)^[ \t]{0,3}#{1,6}[ \t]+(.+?)[ \t]*#*[ \t]*$`)
+	fencedCodeRE   = regexp.MustCompile("(?ms)^[ \\t]{0,3}```[\\w-]*[ \\t]*\\r?\\n.*?\\r?\\n[ \\t]{0,3}```[ \\t]*$")
 	indentedCodeRE = regexp.MustCompile(`(?m)^(?: {4,}|\t).*$`)
-	htmlTagRE     = regexp.MustCompile(`<[^>]+>`)
-	whitespaceRE  = regexp.MustCompile(`\s+`)
+	htmlTagRE      = regexp.MustCompile(`<[^>]+>`)
+	whitespaceRE   = regexp.MustCompile(`\s+`)
 )
 
 // Extracted holds the fields we feed into the search index.
