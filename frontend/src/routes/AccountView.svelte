@@ -11,12 +11,15 @@
     InlineNotification,
     DataTable,
     CodeSnippet,
+    Select,
+    SelectItem,
   } from "carbon-components-svelte";
   import Add from "carbon-icons-svelte/lib/Add.svelte";
   import TrashCan from "carbon-icons-svelte/lib/TrashCan.svelte";
   import { listTokens, createToken, revokeToken, type ApiToken } from "../lib/tokens-api";
   import { mfaSetupStart, mfaSetupConfirm, mfaDisable, type MFASetupChallenge } from "../lib/mfa-api";
-  import { me, refreshMe } from "../lib/identity";
+  import { me, refreshMe, setFontFamily } from "../lib/identity";
+  import { FONTS, DEFAULT_FONT } from "../lib/fonts";
   import { _ } from "../lib/i18n";
 
   let tokens: ApiToken[] = [];
@@ -37,6 +40,23 @@
 
   let verifyBusy = false;
   let verifyResult: { ok: boolean; message: string } | null = null;
+
+  let fontBusy = false;
+  let fontError = "";
+
+  async function changeFont(e: Event) {
+    const next = (e.target as HTMLSelectElement).value;
+    if (fontBusy) return;
+    fontBusy = true;
+    fontError = "";
+    try {
+      await setFontFamily(next || null);
+    } catch (err) {
+      fontError = err instanceof Error ? err.message : "";
+    } finally {
+      fontBusy = false;
+    }
+  }
 
   let mfaSetupOpen = false;
   let mfaChallenge: MFASetupChallenge | null = null;
@@ -226,6 +246,24 @@
   {/if}
 
   {#if $me}
+    <h2>{$_("preferences.heading")}</h2>
+    <div class="font-row">
+      <Select
+        labelText={$_("preferences.font_family")}
+        helperText={$_("preferences.font_hint")}
+        selected={$me.font_family ?? DEFAULT_FONT}
+        on:change={changeFont}
+        disabled={fontBusy}
+      >
+        {#each FONTS as f (f.key)}
+          <SelectItem value={f.key} text={f.label} />
+        {/each}
+      </Select>
+    </div>
+    {#if fontError}
+      <InlineNotification kind="error" title={$_("admin.error")} subtitle={fontError} lowContrast hideCloseButton />
+    {/if}
+
     <h2>{$_("mfa.heading")}</h2>
     {#if $me.totp_enabled_at}
       <p class="dim">{$_("mfa.enabled_since", { values: { date: new Date($me.totp_enabled_at).toLocaleString() } })}</p>
@@ -421,6 +459,10 @@
   }
   .actions {
     margin: 1rem 0;
+  }
+  .font-row {
+    max-width: 420px;
+    margin: 0.75rem 0 1rem;
   }
   .dim {
     color: #6f6a60;

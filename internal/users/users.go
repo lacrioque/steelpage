@@ -35,7 +35,28 @@ type User struct {
 	EmailVerifiedAt *string  `json:"email_verified_at"`
 	TOTPEnabledAt   *string  `json:"totp_enabled_at"`
 	TOTPSecret      string   `json:"-"`
+	FontFamily      *string  `json:"font_family"`
 	PasswordHash    string   `json:"-"`
+}
+
+// AllowedFonts is the closed set of font keys users can pick from the UI.
+// The matching @font-face declarations are bundled by the frontend via
+// @fontsource so we never call out to Google Fonts (GDPR).
+var AllowedFonts = []string{
+	"ibm-plex-sans",
+	"ibm-plex-serif",
+	"eb-garamond",
+	"lato",
+	"verdana",
+}
+
+func IsAllowedFont(s string) bool {
+	for _, f := range AllowedFonts {
+		if f == s {
+			return true
+		}
+	}
+	return false
 }
 
 type Store struct {
@@ -252,7 +273,8 @@ SELECT id,
        created_at,
        email_verified_at,
        COALESCE(totp_secret, '') AS totp_secret,
-       totp_enabled_at
+       totp_enabled_at,
+       font_family
 FROM users
 `
 
@@ -268,8 +290,9 @@ func scanUser(row rowScanner) (*User, error) {
 		oidcSubject   sql.NullString
 		verifiedAt    sql.NullString
 		totpEnabledAt sql.NullString
+		fontFamily    sql.NullString
 	)
-	if err := row.Scan(&u.ID, &email, &u.DisplayName, &u.PasswordHash, &oidcProvider, &oidcSubject, &u.Role, &u.CreatedAt, &verifiedAt, &u.TOTPSecret, &totpEnabledAt); err != nil {
+	if err := row.Scan(&u.ID, &email, &u.DisplayName, &u.PasswordHash, &oidcProvider, &oidcSubject, &u.Role, &u.CreatedAt, &verifiedAt, &u.TOTPSecret, &totpEnabledAt, &fontFamily); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -294,6 +317,10 @@ func scanUser(row rowScanner) (*User, error) {
 	if totpEnabledAt.Valid {
 		v := totpEnabledAt.String
 		u.TOTPEnabledAt = &v
+	}
+	if fontFamily.Valid {
+		v := fontFamily.String
+		u.FontFamily = &v
 	}
 	return &u, nil
 }
@@ -345,6 +372,24 @@ func (s *Store) DisableTOTP(id int64) error {
 func (s *Store) MarkEmailVerified(id int64) error {
 	now := time.Now().UTC().Format(time.RFC3339)
 	res, err := s.DB.Exec(`UPDATE users SET email_verified_at = ? WHERE id = ?`, now, id)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// SetFontFamily updates the per-user font preference. Pass nil to clear it,
+// which reverts the user to the system default (IBM Plex Sans).
+func (s *Store) SetFontFamily(id int64, font *string) error {
+	var val sql.NullString
+	if font != nil {
+		val = sql.NullString{Valid: true, String: *font}
+	}
+	res, err := s.DB.Exec(`UPDATE users SET font_family = ? WHERE id = ?`, val, id)
 	if err != nil {
 		return err
 	}

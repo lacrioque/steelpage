@@ -112,7 +112,10 @@
 
 <aside class="archive-tree">
   <header>
-    <span>{$_("tree.header")}</span>
+    <span class="brand">
+      <img src="/logo.svg" alt="" width="20" height="20" />
+      <span>{$_("tree.header")}</span>
+    </span>
     {#if $me}
       <Button
         kind="ghost"
@@ -210,6 +213,14 @@
     letter-spacing: 0.08em;
     color: #6f6a60;
     padding: 0 0.25rem 0.5rem;
+  }
+  .archive-tree header .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .archive-tree header .brand img {
+    display: block;
   }
   .archive-tree ul {
     list-style: none;

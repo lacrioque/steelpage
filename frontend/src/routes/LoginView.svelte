@@ -123,7 +123,10 @@
 
 <section class="login-page">
   <Tile light>
-    <h1>{$_("auth.heading")}</h1>
+    <div class="brand">
+      <img src="/logo.svg" alt="Steelpage" width="56" height="56" />
+      <h1>{$_("auth.heading")}</h1>
+    </div>
     <p class="hint">{$_("auth.intro")}</p>
 
     {#if oidcError === "mismatch"}
@@ -279,6 +282,18 @@
     margin: 0 0 0.5rem;
     font-weight: 600;
     font-size: 1.5rem;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+  .brand img {
+    display: block;
+  }
+  .brand h1 {
+    margin: 0;
   }
   .hint {
     color: #525252;

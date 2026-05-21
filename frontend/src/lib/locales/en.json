@@ -170,6 +170,11 @@
     "back_to_login": "Back to sign in",
     "error_title": "Something went wrong"
   },
+  "preferences": {
+    "heading": "Preferences",
+    "font_family": "Display font",
+    "font_hint": "Used across the document body and most chrome. Fonts are bundled locally — Steelpage never calls out to Google Fonts."
+  },
   "mfa": {
     "heading": "Two-factor authentication",
     "disabled_hint": "Add an authenticator app to require a 6-digit code at sign-in alongside your password.",

@@ -170,6 +170,11 @@
     "back_to_login": "Zurück zur Anmeldung",
     "error_title": "Etwas ist schiefgelaufen"
   },
+  "preferences": {
+    "heading": "Einstellungen",
+    "font_family": "Anzeigeschrift",
+    "font_hint": "Wird im Dokument und in den meisten UI-Elementen verwendet. Schriften sind lokal eingebettet — Steelpage spricht nie Google Fonts an."
+  },
   "mfa": {
     "heading": "Zwei-Faktor-Authentifizierung",
     "disabled_hint": "Eine Authenticator-App hinzufügen, um beim Anmelden zusätzlich einen 6-stelligen Code zu verlangen.",

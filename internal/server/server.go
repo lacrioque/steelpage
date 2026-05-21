@@ -37,6 +37,7 @@ func New(
 	r.Route("/api", func(r chi.Router) {
 		// Auth — always public.
 		r.Get("/me", a.GetMe)
+		r.Patch("/me", a.PatchMe)
 		r.Get("/me/tokens", a.ListMyTokens)
 		r.Post("/me/tokens", a.CreateMyToken)
 		r.Delete("/me/tokens/{id}", a.DeleteMyToken)

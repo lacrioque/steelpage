@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="frontend/public/logo.png" alt="Steelpage" width="160">
+</p>
+
 # Steelpage
 
 > Git-backed Markdown wiki: backend-renders every page, anchors comments to source lines, ships an `?botready=1` JSON for AI agents, and gates everything with OIDC/MFA + path permissions. One Go binary, one SQLite DB, one Svelte/Carbon SPA.
