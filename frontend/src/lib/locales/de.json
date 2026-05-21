@@ -256,6 +256,8 @@
     "empty": "Noch keine Dokumente.",
     "error": "Baum konnte nicht geladen werden",
     "add_file": "Datei anlegen",
+    "collapse_all": "Alle einklappen",
+    "expand_all": "Alle ausklappen",
     "add_file_heading": "Neues Dokument anlegen",
     "add_help": "Verschachtelte Ordner werden implizit erzeugt — z. B. legt handbook/intro.md den Ordner an.",
     "add_path_label": "Pfad",

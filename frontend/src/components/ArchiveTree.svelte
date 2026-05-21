@@ -2,6 +2,8 @@
   import { onMount } from "svelte";
   import { Button, Modal, TextInput, TextArea, InlineNotification } from "carbon-components-svelte";
   import Add from "carbon-icons-svelte/lib/Add.svelte";
+  import CollapseAll from "carbon-icons-svelte/lib/CollapseAll.svelte";
+  import ExpandAll from "carbon-icons-svelte/lib/ExpandAll.svelte";
   import { currentDoc, navigateToDoc } from "../lib/router";
   import { getTree, saveDocument } from "../lib/api";
   import type { TreeEntry } from "../lib/types";
@@ -69,6 +71,19 @@
     return last.replace(/\.md$/i, "").replace(/[-_]/g, " ");
   }
 
+  // Toggle every <details> in the tree at once. Imperative DOM access is
+  // fine here — the tree is rebuilt from the `entries` store on each
+  // refresh, so we don't need reactive state for collapsed-ness.
+  function setAllOpen(open: boolean) {
+    const root = document.querySelector(".archive-tree");
+    if (!root) return;
+    root.querySelectorAll("details").forEach((d) => {
+      (d as HTMLDetailsElement).open = open;
+    });
+  }
+
+  $: hasFolders = entries.some((e) => e.path.includes("/"));
+
   function buildTree(items: TreeEntry[]): Node {
     const root: Node = { name: "", path: "", children: new Map(), isFile: false };
     for (const item of items) {
@@ -116,16 +131,39 @@
       <img src="/logo.svg" alt="" width="20" height="20" />
       <span>{$_("tree.header")}</span>
     </span>
-    {#if $me}
-      <Button
-        kind="ghost"
-        size="sm"
-        icon={Add}
-        iconDescription={$_("tree.add_file")}
-        tooltipPosition="bottom"
-        on:click={openAdd}
-      />
-    {/if}
+    <div class="header-actions">
+      {#if hasFolders}
+        <Button
+          kind="ghost"
+          size="sm"
+          icon={CollapseAll}
+          iconDescription={$_("tree.collapse_all")}
+          tooltipPosition="bottom"
+          tooltipAlignment="end"
+          on:click={() => setAllOpen(false)}
+        />
+        <Button
+          kind="ghost"
+          size="sm"
+          icon={ExpandAll}
+          iconDescription={$_("tree.expand_all")}
+          tooltipPosition="bottom"
+          tooltipAlignment="end"
+          on:click={() => setAllOpen(true)}
+        />
+      {/if}
+      {#if $me}
+        <Button
+          kind="ghost"
+          size="sm"
+          icon={Add}
+          iconDescription={$_("tree.add_file")}
+          tooltipPosition="bottom"
+          tooltipAlignment="end"
+          on:click={openAdd}
+        />
+      {/if}
+    </div>
   </header>
   {#if loading}
     <p class="muted">{$_("tree.loading")}</p>
@@ -221,6 +259,11 @@
   }
   .archive-tree header .brand img {
     display: block;
+  }
+  .archive-tree header .header-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.1rem;
   }
   .archive-tree ul {
     list-style: none;

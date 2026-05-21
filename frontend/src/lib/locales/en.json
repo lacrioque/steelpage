@@ -256,6 +256,8 @@
     "empty": "No documents yet.",
     "error": "Failed to load tree",
     "add_file": "Add file",
+    "collapse_all": "Collapse all",
+    "expand_all": "Expand all",
     "add_file_heading": "Add a new document",
     "add_help": "Nested folders are implied — e.g. handbook/intro.md creates the folder.",
     "add_path_label": "Path",
