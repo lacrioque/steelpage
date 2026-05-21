@@ -1,0 +1,48 @@
+@media print {
+  .bx--header,
+  .bx--side-nav,
+  .bx--modal,
+  aside,
+  nav,
+  .comments,
+  .bread,
+  .no-print {
+    display: none !important;
+  }
+
+  .bx--content {
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  :root,
+  body {
+    color: #111;
+    background: white;
+  }
+
+  .document-body {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+    font: 11pt/1.45 system-ui, sans-serif;
+  }
+
+  pre,
+  blockquote,
+  table {
+    break-inside: avoid;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+    font-size: 9pt;
+  }
+}
