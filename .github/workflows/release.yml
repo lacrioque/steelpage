@@ -1,0 +1,117 @@
+name: Release
+
+# Triggers when you push a tag like `v0.1.0`. Builds the SPA once, then
+# cross-compiles the Go binary for the matrix targets, packages each into
+# a tarball (or zip on Windows) alongside README/LICENSE/config example,
+# and uploads everything as assets on a new GitHub release.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write  # needed by softprops/action-gh-release to create the release
+
+jobs:
+  build-frontend:
+    name: Build SPA
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: npm install + build
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
+
+      - name: Upload dist/ for the binary build
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 1
+          if-no-files-found: error
+
+  build-binary:
+    name: Build ${{ matrix.goos }}/${{ matrix.goarch }}
+    needs: build-frontend
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - goos: linux
+            goarch: amd64
+            archive: tar.gz
+          - goos: linux
+            goarch: arm64
+            archive: tar.gz
+          - goos: darwin
+            goarch: amd64
+            archive: tar.gz
+          - goos: darwin
+            goarch: arm64
+            archive: tar.gz
+          - goos: windows
+            goarch: amd64
+            archive: zip
+            ext: .exe
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Pull the SPA build
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - name: go build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CGO_ENABLED: '0'
+        run: |
+          out="steelpage${{ matrix.ext }}"
+          go build -trimpath -ldflags="-s -w" -o "$out" ./cmd/steelpage
+          ls -lh "$out"
+
+      - name: Package
+        id: pkg
+        run: |
+          base="steelpage-${GITHUB_REF_NAME}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.archive }}" = "zip" ]; then
+            asset="${base}.zip"
+            zip "${asset}" "steelpage${{ matrix.ext }}" LICENSE.md README.md config.example.yaml
+          else
+            asset="${base}.tar.gz"
+            tar czf "${asset}" "steelpage${{ matrix.ext }}" LICENSE.md README.md config.example.yaml
+          fi
+          echo "asset=${asset}" >> "$GITHUB_OUTPUT"
+          sha256sum "${asset}" | tee "${asset}.sha256"
+
+      - name: Attach asset to release
+        uses: softprops/action-gh-release@v2
+        with:
+          # softprops creates the release on first call and appends to it on
+          # subsequent matrix runs targeting the same tag. The prerelease flag
+          # auto-flips for tags like v1.0.0-rc.1 / v1.0.0-beta.
+          files: |
+            ${{ steps.pkg.outputs.asset }}
+            ${{ steps.pkg.outputs.asset }}.sha256
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          fail_on_unmatched_files: true
