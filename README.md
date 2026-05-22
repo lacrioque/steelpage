@@ -25,11 +25,19 @@ Markdown is the source of truth. Git records every edit. SQLite holds the live c
 
 ---
 
-## Quick start
+## Install (one-liner)
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lacrioque/steelpage/main/scripts/install.sh | bash
+```
+
+Walks you through host/port, base URL, content repo path, and bootstrap admin, then (on Linux) drops a hardened systemd unit. Defaults install to `/opt/steelpage` — set `INSTALL_DIR=…` to override.
+
+## Quick start (from source)
 
 ```bash
 # 1. Clone the source
-git clone https://github.com/markusfluer/steelpage.git
+git clone https://github.com/lacrioque/steelpage.git
 cd steelpage
 
 # 2. Create the content repo (your Markdown lives here, separate from the source)
