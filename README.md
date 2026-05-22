@@ -33,6 +33,14 @@ curl -fsSL https://raw.githubusercontent.com/lacrioque/steelpage/main/scripts/in
 
 Walks you through host/port, base URL, content repo path, and bootstrap admin, then (on Linux) drops a hardened systemd unit. Defaults install to `/opt/steelpage` — set `INSTALL_DIR=…` to override.
 
+To update an existing install to the latest release:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/lacrioque/steelpage/main/scripts/update.sh | bash
+```
+
+Stops the service, swaps the binary (old one kept as `steelpage.prev`), restarts. `config.yaml` and content are never touched.
+
 ## Quick start (from source)
 
 ```bash

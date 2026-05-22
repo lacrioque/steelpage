@@ -215,6 +215,7 @@ asroot mkdir -p "$INSTALL_DIR" "$CONTENT_DIR"
 asroot install -m 0755 "$TMPDIR_REAL/extract/steelpage" "$INSTALL_DIR/steelpage"
 asroot install -m 0644 "$TMPDIR_REAL/extract/README.md" "$INSTALL_DIR/README.md" 2>/dev/null || true
 asroot install -m 0644 "$TMPDIR_REAL/extract/LICENSE.md" "$INSTALL_DIR/LICENSE.md" 2>/dev/null || true
+printf "%s\n" "$TAG" | asroot tee "$INSTALL_DIR/.steelpage-version" >/dev/null
 
 # Render config.yaml. We render to a tmp file as the current user, then
 # move into place with sudo if needed.
