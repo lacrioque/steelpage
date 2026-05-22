@@ -86,7 +86,8 @@ type noopMailer struct{}
 
 func (noopMailer) Enabled() bool { return false }
 func (noopMailer) Send(msg Message) error {
-	log.Printf("mailer: noop — would send %q to %v", msg.Subject, msg.To)
+	log.Printf("mailer: SMTP not configured — DROPPED %q → %s (set email.* in config.yaml to enable)",
+		msg.Subject, strings.Join(msg.To, ", "))
 	return ErrNotConfigured
 }
 
@@ -96,7 +97,27 @@ type smtpMailer struct {
 
 func (s *smtpMailer) Enabled() bool { return true }
 
+// Send emits a structured log line on entry, on success, and on each failure
+// so operators can grep `mailer:` in journalctl and see exactly which step
+// broke. Bodies (and reset/verify links inside them) are deliberately NOT
+// logged — only Subject + recipient list.
 func (s *smtpMailer) Send(msg Message) error {
+	to := strings.Join(msg.To, ", ")
+	start := time.Now()
+	log.Printf("mailer: sending %q → %s (via %s:%d/%s)",
+		msg.Subject, to, s.cfg.Host, s.cfg.Port, s.cfg.Encryption)
+
+	err := s.send(msg)
+	dur := time.Since(start).Round(time.Millisecond)
+	if err != nil {
+		log.Printf("mailer: send FAILED %q → %s after %s: %v", msg.Subject, to, dur, err)
+		return err
+	}
+	log.Printf("mailer: sent %q → %s in %s", msg.Subject, to, dur)
+	return nil
+}
+
+func (s *smtpMailer) send(msg Message) error {
 	if len(msg.To) == 0 {
 		return fmt.Errorf("%w: no recipients", ErrSendFailed)
 	}

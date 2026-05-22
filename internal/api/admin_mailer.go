@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/markusfluer/steelpage/internal/mailer"
@@ -68,6 +69,7 @@ func (a *API) AdminMailerTest(w http.ResponseWriter, r *http.Request) {
 		to = *u.Email
 	}
 
+	log.Printf("mailer: admin test email requested by user_id=%d → %s", u.ID, to)
 	msg := mailer.Message{
 		To:      []string{to},
 		Subject: "Steelpage test email",

@@ -75,13 +75,17 @@ func (s *Service) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 			`<p><a href="` + link + `">` + link + `</a></p>` +
 			`<p>If you didn't request this, you can safely ignore this email — your password won't change.</p>`
 
+		log.Printf("auth: password reset requested for user_id=%d email=%q (token expires %s)",
+			u.ID, *u.Email, expires.Format(time.RFC3339))
 		if err := s.Mailer.Send(mailer.Message{
 			To:      []string{*u.Email},
 			Subject: "Steelpage password reset",
 			Text:    text,
 			HTML:    html,
 		}); err != nil {
-			log.Printf("auth.ForgotPassword: mailer.Send failed for %q: %v", *u.Email, err)
+			log.Printf("auth: password reset email FAILED for user_id=%d: %v", u.ID, err)
+		} else {
+			log.Printf("auth: password reset email queued for user_id=%d", u.ID)
 		}
 	}
 
@@ -155,6 +159,7 @@ func (s *Service) ResetPassword(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	committed = true
+	log.Printf("auth: password reset COMPLETED for user_id=%d", userID)
 
 	// Belt-and-braces: ensure the user actually exists. We don't want to leave
 	// stale tokens pointing at a deleted user (FK ON DELETE CASCADE handles

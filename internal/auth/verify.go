@@ -91,6 +91,7 @@ func (s *Service) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to verify token")
 		return
 	}
+	log.Printf("auth: email verified for user_id=%d email=%q", userID, emailAt)
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -187,12 +188,19 @@ If you didn't create a Steelpage account, you can ignore this email.
 <p style="color:#6f6a60;font-size:0.9em">If you didn't create a Steelpage account, you can ignore this email.</p>
 <p>— Steelpage</p>`, displayName, *u.Email, link, link)
 
-	return s.Mailer.Send(mailer.Message{
+	log.Printf("auth: verification email requested for user_id=%d email=%q (expires in %s)",
+		u.ID, *u.Email, verificationTokenTTL)
+	if err := s.Mailer.Send(mailer.Message{
 		To:      []string{*u.Email},
 		Subject: subject,
 		Text:    textBody,
 		HTML:    htmlBody,
-	})
+	}); err != nil {
+		log.Printf("auth: verification email FAILED for user_id=%d: %v", u.ID, err)
+		return err
+	}
+	log.Printf("auth: verification email queued for user_id=%d", u.ID)
+	return nil
 }
 
 // newPlaintextToken returns a 32-hex-char random string for use in email links.
