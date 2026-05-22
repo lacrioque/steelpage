@@ -68,6 +68,81 @@ a {
   scroll-margin-top: 4rem;
 }
 
+/*
+ * Typographic spacing — pair sizes + margins with Carbon's productive
+ * heading scale and 8px spacing grid. Comments next to each value cite
+ * the matching Carbon spacing token so the math is auditable.
+ *
+ *   spacing-03 = 0.5rem (8px)    spacing-07 = 2rem  (32px)
+ *   spacing-04 = 0.75rem (12px)  spacing-08 = 2.5rem (40px)
+ *   spacing-05 = 1rem  (16px)    spacing-09 = 3rem  (48px)
+ *   spacing-06 = 1.5rem (24px)
+ *
+ * Top margins double as separators from the preceding paragraph;
+ * :first-child kills them so a doc that opens with a heading isn't
+ * pushed off the top of the canvas.
+ */
+.document-body h1 {
+  font-size: 2.625rem;       /* productive-heading-07 */
+  line-height: 1.199;
+  font-weight: 300;
+  margin: 0 0 1.5rem;         /* spacing-06 */
+}
+.document-body h2 {
+  font-size: 1.75rem;        /* productive-heading-05 */
+  line-height: 1.286;
+  font-weight: 400;
+  margin: 2.5rem 0 1rem;      /* spacing-08 / spacing-05 */
+}
+.document-body h3 {
+  font-size: 1.25rem;        /* productive-heading-04 */
+  line-height: 1.4;
+  font-weight: 400;
+  margin: 2rem 0 1rem;        /* spacing-07 / spacing-05 */
+}
+.document-body h4 {
+  font-size: 1rem;           /* productive-heading-03 */
+  line-height: 1.5;
+  font-weight: 600;
+  margin: 1.5rem 0 0.75rem;   /* spacing-06 / spacing-04 */
+}
+.document-body h5 {
+  font-size: 0.875rem;       /* productive-heading-02 */
+  line-height: 1.286;
+  font-weight: 600;
+  margin: 1rem 0 0.5rem;      /* spacing-05 / spacing-03 */
+}
+.document-body h6 {
+  font-size: 0.75rem;        /* productive-heading-01 */
+  line-height: 1.334;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  margin: 0.75rem 0 0.5rem;   /* spacing-04 / spacing-03 */
+}
+.document-body p {
+  margin: 0 0 1rem;           /* spacing-05 */
+  line-height: 1.5;          /* body-long-02 */
+}
+.document-body > :first-child,
+.document-body h1:first-child,
+.document-body h2:first-child,
+.document-body h3:first-child,
+.document-body h4:first-child,
+.document-body h5:first-child,
+.document-body h6:first-child {
+  margin-top: 0;
+}
+/* Headings that immediately follow another heading shouldn't double-space —
+   the lower-level title is a continuation of the same idea. */
+.document-body h1 + h2,
+.document-body h2 + h3,
+.document-body h3 + h4,
+.document-body h4 + h5,
+.document-body h5 + h6 {
+  margin-top: 0.75rem;        /* spacing-04 */
+}
+
 .document-body blockquote {
   border-left: 3px solid #cfc7b8;
   margin: 1.5rem 0;
