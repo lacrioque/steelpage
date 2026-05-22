@@ -13,7 +13,9 @@ import (
 
 	"github.com/alexedwards/scs/sqlite3store"
 	"github.com/alexedwards/scs/v2"
+	"github.com/gorilla/sessions"
 	"github.com/markbates/goth"
+	"github.com/markbates/goth/gothic"
 	"github.com/markbates/goth/providers/openidConnect"
 	"golang.org/x/crypto/bcrypt"
 
@@ -69,6 +71,7 @@ func main() {
 	sm.Lifetime = 30 * 24 * time.Hour
 
 	ensureSessionSecret()
+	configureGothicStore()
 
 	if cfg.Auth.OIDC.Enabled {
 		provider, perr := openidConnect.New(
@@ -136,6 +139,28 @@ func main() {
 
 	log.Printf("Steelpage listening on http://%s (content: %s, db: %s)", cfg.Server.Bind, cfg.Repo.Path, cfg.DB.Path)
 	log.Fatal(http.ListenAndServe(cfg.Server.Bind, handler))
+}
+
+// configureGothicStore swaps gothic's default CookieStore for a
+// FilesystemStore so OIDC sessions aren't capped by the browser's 4 KB
+// cookie limit. Some IdPs (Authentik, Keycloak with rich claims) issue
+// id_tokens that, once goth wraps the user record + tokens + state into a
+// session, easily exceed 4 KB — the cookie store then throws
+// "securecookie: the value is too long" during the OAuth exchange.
+//
+// We keep the small state cookie on the browser; the fat session payload
+// lives in a temp file keyed by that cookie. Files are short-lived (one
+// OAuth round-trip) and get cleaned up when the process tears down its
+// tmp dir.
+func configureGothicStore() {
+	secret := os.Getenv("SESSION_SECRET")
+	store := sessions.NewFilesystemStore("", []byte(secret))
+	// Allow plenty of headroom for id_tokens with many claims. Default is
+	// 4096, which is what was biting us.
+	store.MaxLength(64 * 1024)
+	store.Options.HttpOnly = true
+	store.Options.Path = "/"
+	gothic.Store = store
 }
 
 // ensureSessionSecret guarantees gothic has a SESSION_SECRET to drive its
