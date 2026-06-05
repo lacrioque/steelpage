@@ -183,6 +183,29 @@ func (s *Store) Update(id int64, in UpdateInput) (*Comment, error) {
 	return s.GetByID(id)
 }
 
+// ThreadParticipantIDs returns the distinct author ids of a thread: the root
+// comment plus every reply pointing at it. Used to fan out "reply"
+// notifications to everyone who took part in the conversation.
+func (s *Store) ThreadParticipantIDs(rootID int64) ([]int64, error) {
+	rows, err := s.DB.Query(
+		`SELECT DISTINCT author_id FROM comments WHERE id = ? OR reply_to_id = ?`,
+		rootID, rootID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []int64
+	for rows.Next() {
+		var id int64
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		out = append(out, id)
+	}
+	return out, rows.Err()
+}
+
 // MovePath relocates every comment from one document path to another. Run
 // inside the transaction that renames the file so they stay in sync.
 func (s *Store) MovePath(from, to string) error {

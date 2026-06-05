@@ -117,3 +117,61 @@ func TestEnsureFromOIDC_EmailIsCaseInsensitive(t *testing.T) {
 		t.Fatalf("case-insensitive email match failed: %d vs %d", local.ID, linked.ID)
 	}
 }
+
+func TestNotificationPrefDefaults(t *testing.T) {
+	s := setup(t)
+
+	u, err := s.CreateLocal("gina@example.com", "Gina", "$2a$12$dummyhash", users.RoleUser)
+	if err != nil {
+		t.Fatalf("CreateLocal: %v", err)
+	}
+	if !u.EmailOnMention {
+		t.Fatalf("email_on_mention should default to true")
+	}
+	if u.EmailOnResponse {
+		t.Fatalf("email_on_response should default to false")
+	}
+}
+
+func TestSetNotificationPrefs(t *testing.T) {
+	s := setup(t)
+
+	u, err := s.CreateLocal("hugo@example.com", "Hugo", "$2a$12$dummyhash", users.RoleUser)
+	if err != nil {
+		t.Fatalf("CreateLocal: %v", err)
+	}
+
+	// Flip one field, leave the other untouched.
+	off := false
+	if err := s.SetNotificationPrefs(u.ID, &off, nil); err != nil {
+		t.Fatalf("set prefs: %v", err)
+	}
+	got, err := s.GetByID(u.ID)
+	if err != nil {
+		t.Fatalf("reload: %v", err)
+	}
+	if got.EmailOnMention {
+		t.Fatalf("email_on_mention not turned off")
+	}
+	if got.EmailOnResponse {
+		t.Fatalf("email_on_response changed without being set")
+	}
+
+	// Flip both.
+	on := true
+	if err := s.SetNotificationPrefs(u.ID, &on, &on); err != nil {
+		t.Fatalf("set both prefs: %v", err)
+	}
+	got, _ = s.GetByID(u.ID)
+	if !got.EmailOnMention || !got.EmailOnResponse {
+		t.Fatalf("prefs not both on: mention=%v response=%v", got.EmailOnMention, got.EmailOnResponse)
+	}
+
+	// No-op call is fine; unknown user errors.
+	if err := s.SetNotificationPrefs(u.ID, nil, nil); err != nil {
+		t.Fatalf("no-op prefs: %v", err)
+	}
+	if err := s.SetNotificationPrefs(99999, &on, nil); !errors.Is(err, users.ErrNotFound) {
+		t.Fatalf("expected ErrNotFound for unknown user, got %v", err)
+	}
+}

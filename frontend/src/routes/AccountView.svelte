@@ -18,7 +18,7 @@
   import TrashCan from "carbon-icons-svelte/lib/TrashCan.svelte";
   import { listTokens, createToken, revokeToken, type ApiToken } from "../lib/tokens-api";
   import { mfaSetupStart, mfaSetupConfirm, mfaDisable, type MFASetupChallenge } from "../lib/mfa-api";
-  import { me, refreshMe, setFontFamily } from "../lib/identity";
+  import { me, refreshMe, setFontFamily, setNotificationPrefs } from "../lib/identity";
   import { FONTS, DEFAULT_FONT } from "../lib/fonts";
   import { _ } from "../lib/i18n";
 
@@ -43,6 +43,23 @@
 
   let fontBusy = false;
   let fontError = "";
+
+  let notifyBusy = false;
+  let notifyError = "";
+
+  async function changeNotifyPref(key: "email_on_mention" | "email_on_response", e: CustomEvent<boolean>) {
+    if (notifyBusy) return;
+    const checked = e.detail;
+    notifyBusy = true;
+    notifyError = "";
+    try {
+      await setNotificationPrefs({ [key]: checked });
+    } catch (err) {
+      notifyError = err instanceof Error ? err.message : "";
+    } finally {
+      notifyBusy = false;
+    }
+  }
 
   async function changeFont(e: Event) {
     const next = (e.target as HTMLSelectElement).value;
@@ -264,6 +281,26 @@
       <InlineNotification kind="error" title={$_("admin.error")} subtitle={fontError} lowContrast hideCloseButton />
     {/if}
 
+    <div class="notify-prefs">
+      <Checkbox
+        labelText={$_("preferences.email_on_mention")}
+        checked={$me.email_on_mention}
+        disabled={notifyBusy}
+        on:check={(e) => changeNotifyPref("email_on_mention", e)}
+      />
+      <p class="dim">{$_("preferences.email_on_mention_hint")}</p>
+      <Checkbox
+        labelText={$_("preferences.email_on_response")}
+        checked={$me.email_on_response}
+        disabled={notifyBusy}
+        on:check={(e) => changeNotifyPref("email_on_response", e)}
+      />
+      <p class="dim">{$_("preferences.email_on_response_hint")}</p>
+    </div>
+    {#if notifyError}
+      <InlineNotification kind="error" title={$_("admin.error")} subtitle={notifyError} lowContrast hideCloseButton />
+    {/if}
+
     <h2>{$_("mfa.heading")}</h2>
     {#if $me.totp_enabled_at}
       <p class="dim">{$_("mfa.enabled_since", { values: { date: new Date($me.totp_enabled_at).toLocaleString() } })}</p>
@@ -463,6 +500,15 @@
   .font-row {
     max-width: 420px;
     margin: 0.75rem 0 1rem;
+  }
+  .notify-prefs {
+    margin: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .notify-prefs .dim {
+    margin: 0 0 0.75rem 1.65rem;
   }
   .dim {
     color: #6f6a60;

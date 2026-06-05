@@ -36,7 +36,17 @@ type User struct {
 	TOTPEnabledAt   *string  `json:"totp_enabled_at"`
 	TOTPSecret      string   `json:"-"`
 	FontFamily      *string  `json:"font_family"`
+	EmailOnMention  bool     `json:"email_on_mention"`
+	EmailOnResponse bool     `json:"email_on_response"`
 	PasswordHash    string   `json:"-"`
+}
+
+// Mention is the minimal public projection of a user for @mention matching
+// and autocomplete. Deliberately excludes email/role so the mentionable
+// endpoint leaks nothing beyond what comment authorship already shows.
+type Mention struct {
+	ID          int64  `json:"id"`
+	DisplayName string `json:"display_name"`
 }
 
 // AllowedFonts is the closed set of font keys users can pick from the UI.
@@ -274,7 +284,9 @@ SELECT id,
        email_verified_at,
        COALESCE(totp_secret, '') AS totp_secret,
        totp_enabled_at,
-       font_family
+       font_family,
+       email_on_mention,
+       email_on_response
 FROM users
 `
 
@@ -284,15 +296,17 @@ type rowScanner interface {
 
 func scanUser(row rowScanner) (*User, error) {
 	var (
-		u             User
-		email         sql.NullString
-		oidcProvider  sql.NullString
-		oidcSubject   sql.NullString
-		verifiedAt    sql.NullString
-		totpEnabledAt sql.NullString
-		fontFamily    sql.NullString
+		u               User
+		email           sql.NullString
+		oidcProvider    sql.NullString
+		oidcSubject     sql.NullString
+		verifiedAt      sql.NullString
+		totpEnabledAt   sql.NullString
+		fontFamily      sql.NullString
+		emailOnMention  int64
+		emailOnResponse int64
 	)
-	if err := row.Scan(&u.ID, &email, &u.DisplayName, &u.PasswordHash, &oidcProvider, &oidcSubject, &u.Role, &u.CreatedAt, &verifiedAt, &u.TOTPSecret, &totpEnabledAt, &fontFamily); err != nil {
+	if err := row.Scan(&u.ID, &email, &u.DisplayName, &u.PasswordHash, &oidcProvider, &oidcSubject, &u.Role, &u.CreatedAt, &verifiedAt, &u.TOTPSecret, &totpEnabledAt, &fontFamily, &emailOnMention, &emailOnResponse); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, ErrNotFound
 		}
@@ -322,6 +336,8 @@ func scanUser(row rowScanner) (*User, error) {
 		v := fontFamily.String
 		u.FontFamily = &v
 	}
+	u.EmailOnMention = emailOnMention != 0
+	u.EmailOnResponse = emailOnResponse != 0
 	return &u, nil
 }
 
@@ -398,6 +414,62 @@ func (s *Store) SetFontFamily(id int64, font *string) error {
 		return ErrNotFound
 	}
 	return nil
+}
+
+// SetNotificationPrefs updates the per-user email notification toggles.
+// Nil pointers leave the corresponding column untouched, so PATCH /api/me
+// can flip one without knowing the other.
+func (s *Store) SetNotificationPrefs(id int64, onMention, onResponse *bool) error {
+	if onMention == nil && onResponse == nil {
+		return nil
+	}
+	sets := make([]string, 0, 2)
+	args := make([]any, 0, 3)
+	if onMention != nil {
+		sets = append(sets, "email_on_mention = ?")
+		args = append(args, boolToInt(*onMention))
+	}
+	if onResponse != nil {
+		sets = append(sets, "email_on_response = ?")
+		args = append(args, boolToInt(*onResponse))
+	}
+	args = append(args, id)
+	res, err := s.DB.Exec(`UPDATE users SET `+strings.Join(sets, ", ")+` WHERE id = ?`, args...)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+func boolToInt(b bool) int64 {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// Mentionable lists every user as an @mention candidate (id + display name
+// only). Serves both the autocomplete endpoint and server-side mention
+// resolution on comment save.
+func (s *Store) Mentionable() ([]Mention, error) {
+	rows, err := s.DB.Query(`SELECT id, display_name FROM users ORDER BY display_name ASC, id ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Mention
+	for rows.Next() {
+		var m Mention
+		if err := rows.Scan(&m.ID, &m.DisplayName); err != nil {
+			return nil, err
+		}
+		out = append(out, m)
+	}
+	return out, rows.Err()
 }
 
 // UpdatePasswordHash replaces the password_hash for a user. Used by the

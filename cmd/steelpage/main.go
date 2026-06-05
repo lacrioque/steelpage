@@ -29,6 +29,7 @@ import (
 	"github.com/markusfluer/steelpage/internal/gitstore"
 	"github.com/markusfluer/steelpage/internal/groups"
 	"github.com/markusfluer/steelpage/internal/mailer"
+	"github.com/markusfluer/steelpage/internal/notifications"
 	"github.com/markusfluer/steelpage/internal/permissions"
 	"github.com/markusfluer/steelpage/internal/render"
 	"github.com/markusfluer/steelpage/internal/search"
@@ -98,6 +99,7 @@ func main() {
 	ss := search.NewStore(dbConn)
 	perms := permissions.New(dbConn)
 	toks := tokens.New(dbConn)
+	notif := notifications.New(dbConn)
 
 	// Live config service: YAML + DB overrides + subscribers.
 	cfgsvc, err := configsvc.New(dbConn, cfg)
@@ -134,7 +136,7 @@ func main() {
 		log.Printf("auth: bootstrap admin: %v", err)
 	}
 
-	a := api.New(cfg, r, g, u, gs, c, idx, ss, sm, authSvc, perms, toks, mail, cfgsvc)
+	a := api.New(cfg, r, g, u, gs, c, idx, ss, sm, authSvc, perms, toks, mail, cfgsvc, notif)
 	handler := server.New(cfg, a, sm, u, gs, toks, dist)
 
 	log.Printf("Steelpage listening on http://%s (content: %s, db: %s)", cfg.Server.Bind, cfg.Repo.Path, cfg.DB.Path)

@@ -35,10 +35,12 @@
   import CommentsSidebar from "../components/CommentsSidebar.svelte";
   import AddCommentModal from "../components/AddCommentModal.svelte";
   import LocaleToggle from "../components/LocaleToggle.svelte";
+  import NotificationBell from "../components/NotificationBell.svelte";
   import SearchOverlay from "../components/SearchOverlay.svelte";
   import VersionMenu from "../components/VersionMenu.svelte";
   import { currentDoc, navigateToDoc, navigateToLogin, navigateToAdmin, navigateToAccount, routeKind } from "../lib/router";
   import { me, refreshMe, logout } from "../lib/identity";
+  import { startPolling, stopPolling } from "../lib/notifications-store";
   import { getCapabilities, type AuthCapabilities } from "../lib/auth-api";
   import {
     doc as docStore,
@@ -88,6 +90,14 @@
     }
   }
 
+  // Notification polling follows the session: starts on login, stops (and
+  // clears) on logout. startPolling is idempotent.
+  $: if ($me) {
+    startPolling();
+  } else {
+    stopPolling();
+  }
+
   onMount(async () => {
     await refreshMe();
     try {
@@ -118,6 +128,7 @@
       window.removeEventListener("keydown", onKeydown);
       setOnMarkerClick(null);
       setOnEmptyGutterClick(null);
+      stopPolling();
     };
   });
 
@@ -238,6 +249,10 @@
         icon={SearchIcon}
         on:click={() => (searchOpen = true)}
       />
+    {/if}
+
+    {#if $me}
+      <NotificationBell />
     {/if}
 
     <LocaleToggle />

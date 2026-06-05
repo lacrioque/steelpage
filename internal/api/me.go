@@ -25,7 +25,9 @@ func (a *API) GetMe(w http.ResponseWriter, r *http.Request) {
 // distinguish "not in this request" from "set to empty". For font_family, a
 // nil pointer + present "font_family":null clears the preference.
 type patchMeRequest struct {
-	FontFamily *string `json:"font_family"`
+	FontFamily      *string `json:"font_family"`
+	EmailOnMention  *bool   `json:"email_on_mention"`
+	EmailOnResponse *bool   `json:"email_on_response"`
 }
 
 // PatchMe updates per-user preferences. Token-authenticated callers are
@@ -65,6 +67,34 @@ func (a *API) PatchMe(w http.ResponseWriter, r *http.Request) {
 		}
 		if err := a.Users.SetFontFamily(u.ID, font); err != nil {
 			logError("set font", err)
+			writeError(w, http.StatusInternalServerError, "failed to save preference")
+			return
+		}
+	}
+
+	parseBool := func(key string) (*bool, bool) {
+		boolRaw, ok := raw[key]
+		if !ok {
+			return nil, true
+		}
+		var b bool
+		if err := json.Unmarshal(boolRaw, &b); err != nil {
+			writeError(w, http.StatusBadRequest, key+" must be a boolean")
+			return nil, false
+		}
+		return &b, true
+	}
+	onMention, ok := parseBool("email_on_mention")
+	if !ok {
+		return
+	}
+	onResponse, ok := parseBool("email_on_response")
+	if !ok {
+		return
+	}
+	if onMention != nil || onResponse != nil {
+		if err := a.Users.SetNotificationPrefs(u.ID, onMention, onResponse); err != nil {
+			logError("set notification prefs", err)
 			writeError(w, http.StatusInternalServerError, "failed to save preference")
 			return
 		}

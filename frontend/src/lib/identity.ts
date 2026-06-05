@@ -14,6 +14,8 @@ export type Me = {
   email_verified_at?: string | null;
   totp_enabled_at?: string | null;
   font_family?: string | null;
+  email_on_mention: boolean;
+  email_on_response: boolean;
 };
 
 export const me = writable<Me | null>(null);
@@ -46,14 +48,12 @@ export function setMe(next: Me | null): void {
   meLoaded.set(true);
 }
 
-// setFontFamily PATCHes /api/me with the new preference. Pass null to clear
-// the override and revert to the default IBM Plex Sans.
-export async function setFontFamily(font: string | null): Promise<Me> {
+async function patchMe(patch: Record<string, unknown>): Promise<Me> {
   const res = await fetch("/api/me", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     credentials: "same-origin",
-    body: JSON.stringify({ font_family: font }),
+    body: JSON.stringify(patch),
   });
   if (!res.ok) {
     let msg = `Failed to save preference (${res.status})`;
@@ -68,4 +68,19 @@ export async function setFontFamily(font: string | null): Promise<Me> {
   const updated: Me = await res.json();
   me.set(updated);
   return updated;
+}
+
+// setFontFamily PATCHes /api/me with the new preference. Pass null to clear
+// the override and revert to the default IBM Plex Sans.
+export async function setFontFamily(font: string | null): Promise<Me> {
+  return patchMe({ font_family: font });
+}
+
+// setNotificationPrefs flips the email-on-mention / email-on-response
+// toggles. Omitted fields stay untouched server-side.
+export async function setNotificationPrefs(prefs: {
+  email_on_mention?: boolean;
+  email_on_response?: boolean;
+}): Promise<Me> {
+  return patchMe(prefs);
 }

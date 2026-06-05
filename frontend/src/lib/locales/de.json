@@ -173,7 +173,11 @@
   "preferences": {
     "heading": "Einstellungen",
     "font_family": "Anzeigeschrift",
-    "font_hint": "Wird im Dokument und in den meisten UI-Elementen verwendet. Schriften sind lokal eingebettet — Steelpage spricht nie Google Fonts an."
+    "font_hint": "Wird im Dokument und in den meisten UI-Elementen verwendet. Schriften sind lokal eingebettet — Steelpage spricht nie Google Fonts an.",
+    "email_on_mention": "E-Mail bei Erwähnung",
+    "email_on_mention_hint": "Sendet eine E-Mail, wenn dich ein Kommentar mit @ erwähnt. Setzt eine bestätigte E-Mail-Adresse voraus.",
+    "email_on_response": "E-Mail bei Antworten auf meine Kommentare",
+    "email_on_response_hint": "Sendet eine E-Mail, wenn jemand in einem Kommentar-Thread antwortet, an dem du beteiligt warst. Setzt eine bestätigte E-Mail-Adresse voraus."
   },
   "mfa": {
     "heading": "Zwei-Faktor-Authentifizierung",
@@ -380,6 +384,15 @@
     "cancel": "Abbrechen",
     "empty_error": "Kommentar darf nicht leer sein",
     "no_identity": "Bitte zuerst einen Anzeigenamen festlegen",
-    "failed": "Kommentar konnte nicht erstellt werden"
+    "failed": "Kommentar konnte nicht erstellt werden",
+    "mention_hint": "Tippe @, um jemanden zu erwähnen — die Person wird benachrichtigt."
+  },
+  "notifications": {
+    "bell": "Benachrichtigungen",
+    "heading": "Benachrichtigungen",
+    "empty": "Noch nichts hier — Erwähnungen und Antworten erscheinen in dieser Liste.",
+    "mention_text": "{actor} hat dich auf {page} erwähnt",
+    "reply_text": "{actor} hat auf deinen Kommentar auf {page} geantwortet",
+    "mark_all_read": "Alle als gelesen markieren"
   }
 }

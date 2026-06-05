@@ -17,6 +17,7 @@ import (
 	"github.com/markusfluer/steelpage/internal/gitstore"
 	"github.com/markusfluer/steelpage/internal/groups"
 	"github.com/markusfluer/steelpage/internal/mailer"
+	"github.com/markusfluer/steelpage/internal/notifications"
 	"github.com/markusfluer/steelpage/internal/permissions"
 	"github.com/markusfluer/steelpage/internal/render"
 	"github.com/markusfluer/steelpage/internal/search"
@@ -25,20 +26,21 @@ import (
 )
 
 type API struct {
-	Cfg         *config.Config
-	Renderer    *render.Renderer
-	Git         *gitstore.Store
-	Users       *users.Store
-	Groups      *groups.Store
-	Comments    *comments.Store
-	Indexer     *search.Indexer
-	SearchStore *search.Store
-	Sessions    *scs.SessionManager
-	Auth        *auth.Service
-	Permissions *permissions.Store
-	Tokens      *tokens.Store
-	Mailer      mailer.Mailer
-	Configsvc   *configsvc.Service
+	Cfg           *config.Config
+	Renderer      *render.Renderer
+	Git           *gitstore.Store
+	Users         *users.Store
+	Groups        *groups.Store
+	Comments      *comments.Store
+	Indexer       *search.Indexer
+	SearchStore   *search.Store
+	Sessions      *scs.SessionManager
+	Auth          *auth.Service
+	Permissions   *permissions.Store
+	Tokens        *tokens.Store
+	Mailer        mailer.Mailer
+	Configsvc     *configsvc.Service
+	Notifications *notifications.Store
 
 	saveMu  sync.Mutex
 	saveLks map[string]*sync.Mutex
@@ -59,23 +61,25 @@ func New(
 	toks *tokens.Store,
 	mail mailer.Mailer,
 	cfgsvc *configsvc.Service,
+	notif *notifications.Store,
 ) *API {
 	return &API{
-		Cfg:         cfg,
-		Renderer:    r,
-		Git:         g,
-		Users:       u,
-		Groups:      gs,
-		Comments:    c,
-		Indexer:     idx,
-		SearchStore: ss,
-		Sessions:    sm,
-		Auth:        authSvc,
-		Permissions: perms,
-		Tokens:      toks,
-		Mailer:      mail,
-		Configsvc:   cfgsvc,
-		saveLks:     make(map[string]*sync.Mutex),
+		Cfg:           cfg,
+		Renderer:      r,
+		Git:           g,
+		Users:         u,
+		Groups:        gs,
+		Comments:      c,
+		Indexer:       idx,
+		SearchStore:   ss,
+		Sessions:      sm,
+		Auth:          authSvc,
+		Permissions:   perms,
+		Tokens:        toks,
+		Mailer:        mail,
+		Configsvc:     cfgsvc,
+		Notifications: notif,
+		saveLks:       make(map[string]*sync.Mutex),
 	}
 }
 

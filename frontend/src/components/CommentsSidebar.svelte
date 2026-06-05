@@ -13,12 +13,33 @@
   import { focusLine } from "../lib/editor";
   import type { Comment } from "../lib/types";
   import { me } from "../lib/identity";
+  import { listMentionable } from "../lib/notifications-api";
+  import { splitMentions } from "../lib/mentions";
   import { _ } from "../lib/i18n";
   import { createEventDispatcher } from "svelte";
 
   const dispatch = createEventDispatcher<{ reply: { parent: Comment } }>();
 
   $: grouped = group($comments);
+
+  // Candidate names for @mention highlighting: every known user (best-effort
+  // — readers without comment permission get 403 and we fall back to the
+  // comment authors, which still covers most mentions).
+  let mentionNames: string[] = [];
+  let mentionNamesFor = "";
+  $: void loadMentionNames($comments[0]?.path ?? "");
+  $: authorNames = [...new Set($comments.map((c) => c.author.display_name))];
+  $: highlightNames = [...new Set([...mentionNames, ...authorNames])];
+
+  async function loadMentionNames(path: string) {
+    if (!path || mentionNamesFor === path) return;
+    mentionNamesFor = path;
+    try {
+      mentionNames = (await listMentionable(path)).map((u) => u.display_name);
+    } catch {
+      mentionNames = [];
+    }
+  }
 
   // Group by line, then sort within each group so a reply lands directly
   // under its parent. Replies pointing at parents that aren't on this line
@@ -114,7 +135,8 @@
                   <Tag type="cool-gray" size="sm">{$_("comments.reply_badge")}</Tag>
                 {/if}
               </header>
-              <p class="body">{c.body}</p>
+              <!-- Whitespace-sensitive (pre-wrap): keep the each-block on one line. -->
+              <p class="body">{#each splitMentions(c.body, highlightNames) as seg, i (i)}{#if seg.mention}<span class="mention" class:self={$me && seg.text === `@${$me.display_name}`}>{seg.text}</span>{:else}{seg.text}{/if}{/each}</p>
               <footer>
                 <button class="link" type="button" on:click={() => jumpTo(c.line_start)}>
                   {$_("comments.line_jump", { values: { line: c.line_start } })}
@@ -207,6 +229,17 @@
     margin: 0 0 0.5rem 0;
     white-space: pre-wrap;
     color: #161616;
+  }
+  .mention {
+    color: #0f62fe;
+    background: #edf5ff;
+    border-radius: 0.25rem;
+    padding: 0 0.15rem;
+    font-weight: 500;
+  }
+  .mention.self {
+    color: #6929c4;
+    background: #f6f2ff;
   }
   .comment footer {
     display: flex;

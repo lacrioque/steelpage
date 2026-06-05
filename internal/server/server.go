@@ -73,6 +73,12 @@ func New(
 		r.Post("/comments", a.CreateComment)
 		r.Patch("/comments/{id}", a.UpdateComment)
 
+		// Notifications — session-only; handlers refuse token auth.
+		r.Get("/notifications", a.ListNotifications)
+		r.Patch("/notifications/{id}", a.MarkNotificationRead)
+		r.Post("/notifications/read-all", a.MarkAllNotificationsRead)
+		r.Get("/users/mentionable", a.MentionableUsers)
+
 		// Admin.
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.RequireAdmin)

@@ -173,7 +173,11 @@
   "preferences": {
     "heading": "Preferences",
     "font_family": "Display font",
-    "font_hint": "Used across the document body and most chrome. Fonts are bundled locally — Steelpage never calls out to Google Fonts."
+    "font_hint": "Used across the document body and most chrome. Fonts are bundled locally — Steelpage never calls out to Google Fonts.",
+    "email_on_mention": "Email me when someone mentions me",
+    "email_on_mention_hint": "Sends an email when a comment @mentions you. Requires a verified email address.",
+    "email_on_response": "Email me when someone replies to my comments",
+    "email_on_response_hint": "Sends an email when someone replies in a comment thread you took part in. Requires a verified email address."
   },
   "mfa": {
     "heading": "Two-factor authentication",
@@ -380,6 +384,15 @@
     "cancel": "Cancel",
     "empty_error": "Comment can't be empty",
     "no_identity": "Set a display name first",
-    "failed": "Failed to add comment"
+    "failed": "Failed to add comment",
+    "mention_hint": "Type @ to mention someone — they get notified."
+  },
+  "notifications": {
+    "bell": "Notifications",
+    "heading": "Notifications",
+    "empty": "Nothing here yet — mentions and replies show up in this list.",
+    "mention_text": "{actor} mentioned you on {page}",
+    "reply_text": "{actor} replied to your comment on {page}",
+    "mark_all_read": "Mark all as read"
   }
 }

@@ -81,6 +81,7 @@ func (a *API) CreateComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to create comment")
 		return
 	}
+	go a.notifyForComment(u, c, "", false)
 	writeJSON(w, http.StatusCreated, c)
 }
 
@@ -97,7 +98,8 @@ func (a *API) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "comment not found")
 		return
 	}
-	if _, status := a.authorize(r, existing.Path, "comment"); !denyOrContinue(w, status) {
+	u, status := a.authorize(r, existing.Path, "comment")
+	if !denyOrContinue(w, status) {
 		return
 	}
 
@@ -119,6 +121,11 @@ func (a *API) UpdateComment(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "failed to update comment")
 		}
 		return
+	}
+	// Re-notify only when the body actually changed (status flips don't ping),
+	// and only for mentions that weren't in the previous body.
+	if u != nil && req.Body != nil && *req.Body != existing.Body {
+		go a.notifyForComment(u, c, existing.Body, true)
 	}
 	writeJSON(w, http.StatusOK, c)
 }
