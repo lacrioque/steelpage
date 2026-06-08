@@ -40,6 +40,8 @@
   import VersionMenu from "../components/VersionMenu.svelte";
   import { currentDoc, navigateToDoc, navigateToLogin, navigateToAdmin, navigateToAccount, routeKind } from "../lib/router";
   import { me, refreshMe, logout } from "../lib/identity";
+  import { requestLine } from "../lib/comments-store";
+  import { marginFits } from "../lib/viewport";
   import { startPolling, stopPolling } from "../lib/notifications-store";
   import { getCapabilities, type AuthCapabilities } from "../lib/auth-api";
   import {
@@ -67,6 +69,32 @@
   let addCommentReplyAuthor = "";
   let searchOpen = false;
   let caps: AuthCapabilities | null = null;
+
+  // Read view with room → anchored margin (inside DocumentView); edit view or
+  // a narrow window → the accordion fallback.
+  $: marginVisible = showComments && !!$docStore && $marginFits && !$editing;
+  $: accordionVisible = showComments && !!$docStore && ($editing || !$marginFits);
+
+  // A read-view comment marker was clicked: reveal the comments and surface
+  // that line's thread.
+  function onMarkerClick(event: CustomEvent<{ line: number }>) {
+    showComments = true;
+    requestLine(event.detail.line);
+  }
+
+  // The read-view "+" gutter affordance: open the add-comment modal for the
+  // block under the cursor (login required, like the editor gutter).
+  function onAddComment(event: CustomEvent<{ line: number; anchorText: string }>) {
+    if (!$me) {
+      navigateToLogin();
+      return;
+    }
+    addCommentLine = event.detail.line;
+    addCommentAnchor = event.detail.anchorText;
+    addCommentReplyTo = null;
+    addCommentReplyAuthor = "";
+    addCommentOpen = true;
+  }
 
   // Replies start from the parent comment's anchor — same line + same
   // captured text — so they re-anchor along with the conversation.
@@ -355,11 +383,16 @@
       {/if}
     </div>
 
-    <div class="layout" class:with-comments={showComments && $docStore}>
+    <div class="layout" class:with-comments={accordionVisible}>
       <section class="doc">
-        <DocumentView />
+        <DocumentView
+          showMargin={marginVisible}
+          on:markerclick={onMarkerClick}
+          on:addcomment={onAddComment}
+          on:reply={startReply}
+        />
       </section>
-      {#if showComments && $docStore}
+      {#if accordionVisible}
         <CommentsSidebar on:reply={startReply} />
       {/if}
     </div>

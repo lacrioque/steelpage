@@ -1,10 +1,25 @@
-import { writable, get } from "svelte/store";
+import { writable, derived, get } from "svelte/store";
 import type { Comment, CommentStatus } from "./types";
 import * as api from "./comments-api";
+import { listMentionable } from "./notifications-api";
 
 export const comments = writable<Comment[]>([]);
 export const commentsLoading = writable<boolean>(false);
 export const commentsError = writable<string>("");
+
+// Candidate names for @mention highlighting: every known user (best-effort —
+// readers without comment permission get 403 and we fall back to the comment
+// authors, which still covers most mentions). Loaded once per path.
+export const mentionNames = writable<string[]>([]);
+
+// Names to highlight as @mentions in rendered comment bodies: mentionable
+// users plus the authors already shown. Consumed by CommentThread so the
+// accordion and the margin highlight consistently.
+export const highlightNames = derived(
+  [comments, mentionNames],
+  ([$comments, $mentionNames]) =>
+    [...new Set([...$mentionNames, ...$comments.map((c) => c.author.display_name)])],
+);
 
 let currentPath = "";
 
@@ -12,6 +27,7 @@ export async function loadForPath(path: string): Promise<void> {
   currentPath = path;
   commentsLoading.set(true);
   commentsError.set("");
+  mentionNames.set([]);
   try {
     const list = await api.listComments(path);
     if (currentPath === path) comments.set(list);
@@ -20,6 +36,13 @@ export async function loadForPath(path: string): Promise<void> {
     comments.set([]);
   } finally {
     commentsLoading.set(false);
+  }
+  // Best-effort: anonymous readers get 403 and keep author-name highlighting.
+  try {
+    const list = await listMentionable(path);
+    if (currentPath === path) mentionNames.set(list.map((u) => u.display_name));
+  } catch {
+    // ignore — highlightNames falls back to comment authors
   }
 }
 
@@ -48,4 +71,43 @@ export function refreshAfterSave(): void {
 
 export function snapshot(): Comment[] {
   return get(comments);
+}
+
+// requestedLine is bumped when something (a read-view marker, a jump link)
+// wants the comments UI to surface a given source line. The nonce lets the
+// same line be re-requested.
+export const requestedLine = writable<{ line: number; nonce: number } | null>(null);
+
+let lineNonce = 0;
+export function requestLine(line: number): void {
+  requestedLine.set({ line, nonce: ++lineNonce });
+}
+
+// groupByLine groups comments by their anchored line and orders each group
+// so a reply lands directly under its parent (replies pointing at parents
+// that diverged after a save fall back to roots at the bottom).
+export function groupByLine(list: Comment[]): { line: number; items: Comment[] }[] {
+  const byLine = new Map<number, Comment[]>();
+  for (const c of list) {
+    const arr = byLine.get(c.line_start) ?? [];
+    arr.push(c);
+    byLine.set(c.line_start, arr);
+  }
+
+  return [...byLine.entries()]
+    .sort((a, b) => a[0] - b[0])
+    .map(([line, items]) => {
+      const byID = new Map(items.map((c) => [c.id, c]));
+      const roots = items.filter((c) => !c.reply_to || !byID.has(c.reply_to));
+      roots.sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const ordered: Comment[] = [];
+      for (const root of roots) {
+        ordered.push(root);
+        const children = items
+          .filter((c) => c.reply_to && c.reply_to === root.id)
+          .sort((a, b) => a.created_at.localeCompare(b.created_at));
+        ordered.push(...children);
+      }
+      return { line, items: ordered };
+    });
 }
