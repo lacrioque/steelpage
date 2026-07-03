@@ -47,6 +47,12 @@ func (s *Service) ForgotPassword(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 		return
 	}
+	// Machine identities can't hold a password — never mint a reset token
+	// for one, even if a row somehow gained an email.
+	if u.Role == users.RoleMachine {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
 
 	plaintext, err := newResetToken()
 	if err != nil {

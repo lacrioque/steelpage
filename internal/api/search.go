@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/markusfluer/steelpage/internal/middleware"
 	"github.com/markusfluer/steelpage/internal/search"
 )
 
@@ -32,10 +31,9 @@ func (a *API) Search(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "search failed")
 		return
 	}
-	user := middleware.FromContext(r.Context())
 	filtered := make([]search.Result, 0, len(results))
 	for _, res := range results {
-		if a.canRead(res.Path, user) {
+		if a.CanRead(r.Context(), res.Path) {
 			filtered = append(filtered, res)
 			if len(filtered) >= limit {
 				break

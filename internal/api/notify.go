@@ -13,7 +13,7 @@ import (
 	"github.com/markusfluer/steelpage/internal/users"
 )
 
-// notifyForComment fans out notifications (and opt-in emails) for a freshly
+// NotifyForComment fans out notifications (and opt-in emails) for a freshly
 // created or edited comment. Called in a goroutine after the HTTP response is
 // written — failures are logged, never surfaced to the commenter.
 //
@@ -23,7 +23,7 @@ import (
 //   - Replies (create only): every distinct participant of the thread the
 //     comment replies to — root author plus earlier repliers — except anyone
 //     already covered by a mention notification for this same comment.
-func (a *API) notifyForComment(actor *users.User, c *comments.Comment, prevBody string, isUpdate bool) {
+func (a *API) NotifyForComment(actor *users.User, c *comments.Comment, prevBody string, isUpdate bool) {
 	defer func() {
 		if r := recover(); r != nil {
 			log.Printf("notifications: panic while notifying for comment id=%d: %v", c.ID, r)
@@ -121,7 +121,7 @@ func (a *API) maybeEmail(recipientID int64, kind notifications.Kind, actor *user
 		return
 	}
 
-	link := a.docURL(c.Path)
+	link := a.DocURL(c.Path)
 	var subject, textBody, htmlBody string
 	switch kind {
 	case notifications.KindMention:
@@ -176,10 +176,10 @@ Open the page: %s
 	log.Printf("notifications: %s email queued for user_id=%d comment_id=%d", kind, recipient.ID, c.ID)
 }
 
-// docURL builds the absolute link to a document, mirroring auth's publicURL:
+// DocURL builds the absolute link to a document, mirroring auth's publicURL:
 // live server.base_url (admin-editable) with a bind-address fallback.
-func (a *API) docURL(path string) string {
-	live := a.cfg()
+func (a *API) DocURL(path string) string {
+	live := a.LiveCfg()
 	base := live.Server.BaseURL
 	if base == "" {
 		base = "http://" + live.Server.Bind

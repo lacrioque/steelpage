@@ -106,7 +106,7 @@ func (a *API) MentionableUsers(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "path query parameter required")
 		return
 	}
-	u, status := a.authorize(r, path, "comment")
+	u, status := a.Authorize(r.Context(), path, "comment")
 	if !denyOrContinue(w, status) {
 		return
 	}

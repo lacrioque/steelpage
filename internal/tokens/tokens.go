@@ -33,6 +33,13 @@ type Token struct {
 	PlaintextSecret string   `json:"plaintext,omitempty"`
 }
 
+// MachineToken is a token owned by a role='machine' service identity, joined
+// with that identity's display name for the admin UI.
+type MachineToken struct {
+	Token
+	DisplayName string `json:"display_name"`
+}
+
 type Store struct {
 	DB *sql.DB
 }
@@ -149,6 +156,56 @@ func (s *Store) ListForUser(userID int64) ([]*Token, error) {
 		out = append(out, t)
 	}
 	return out, rows.Err()
+}
+
+// ListMachine returns every token owned by a machine user, without plaintext.
+func (s *Store) ListMachine() ([]*MachineToken, error) {
+	rows, err := s.DB.Query(`
+		SELECT t.id, t.user_id, t.name, t.scopes, t.expires_at, t.last_used_at, t.created_at, u.display_name
+		FROM api_tokens t
+		JOIN users u ON u.id = t.user_id
+		WHERE u.role = 'machine'
+		ORDER BY t.created_at DESC, t.id DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []*MachineToken{}
+	for rows.Next() {
+		var (
+			mt        MachineToken
+			scopesRaw string
+			expires   sql.NullString
+			lastUsed  sql.NullString
+		)
+		if err := rows.Scan(&mt.ID, &mt.UserID, &mt.Name, &scopesRaw, &expires, &lastUsed, &mt.CreatedAt, &mt.DisplayName); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(scopesRaw), &mt.Scopes); err != nil {
+			return nil, err
+		}
+		if expires.Valid {
+			v := expires.String
+			mt.ExpiresAt = &v
+		}
+		if lastUsed.Valid {
+			v := lastUsed.String
+			mt.LastUsedAt = &v
+		}
+		out = append(out, &mt)
+	}
+	return out, rows.Err()
+}
+
+// GetByID fetches a token by primary key regardless of owner. Callers that
+// enforce ownership (personal tokens) should use Delete/ListForUser instead.
+func (s *Store) GetByID(id int64) (*Token, error) {
+	row := s.DB.QueryRow(`
+		SELECT id, user_id, name, scopes, expires_at, last_used_at, created_at
+		FROM api_tokens WHERE id = ?`,
+		id,
+	)
+	return scan(row)
 }
 
 // Delete revokes a token owned by userID. Returns ErrNotFound if no row matches

@@ -48,6 +48,7 @@
   import { getCapabilities, type AuthCapabilities } from "../lib/auth-api";
   import type { Me } from "../lib/identity";
   import ConfigEditor from "../components/ConfigEditor.svelte";
+  import MachineTokensPanel from "../components/MachineTokensPanel.svelte";
   import { _ } from "../lib/i18n";
 
   let active = 0;
@@ -318,6 +319,7 @@
     <Tab label={$_("admin.tab_groups")} />
     <Tab label={$_("admin.tab_permissions")} />
     <Tab label={$_("admin.tab_settings")} />
+    <Tab label={$_("admin.tab_machine_tokens")} />
 
     <svelte:fragment slot="content">
       <TabContent>
@@ -685,6 +687,10 @@
             </StructuredListBody>
           </StructuredList>
         {/if}
+      </TabContent>
+
+      <TabContent>
+        <MachineTokensPanel />
       </TabContent>
     </svelte:fragment>
   </Tabs>

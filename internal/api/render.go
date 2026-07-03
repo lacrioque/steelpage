@@ -24,7 +24,7 @@ func (a *API) Render(w http.ResponseWriter, r *http.Request) {
 	// otherwise unauthorised users could render arbitrary content with our
 	// trusted renderer / sanitizer combo.
 	if req.Path != "" {
-		if _, status := a.authorize(r, req.Path, "read"); !denyOrContinue(w, status) {
+		if _, status := a.Authorize(r.Context(), req.Path, "read"); !denyOrContinue(w, status) {
 			return
 		}
 	}

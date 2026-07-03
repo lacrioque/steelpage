@@ -95,6 +95,21 @@ func identifyFromSession(r *http.Request, sm *scs.SessionManager, ustore *users.
 	return u, true
 }
 
+// WithIdentity attaches a user and optional token scopes to ctx, exactly as
+// the Identity middleware would. scopes nil means "session or anonymous";
+// non-nil marks the caller token-authenticated (TokenScopesFromContext relies
+// on that distinction).
+//
+// Both keys are ALWAYS set, overriding any identity already on ctx: the MCP
+// layer re-binds its own resolved identity over contexts that may descend
+// from an HTTP request the Identity middleware already stamped (e.g. a
+// session cookie the MCP endpoints must ignore). A nil user/scopes stored
+// here reads back as nil from FromContext/TokenScopesFromContext.
+func WithIdentity(ctx context.Context, u *users.User, scopes []string) context.Context {
+	ctx = context.WithValue(ctx, userKey, u)
+	return context.WithValue(ctx, scopesKey, scopes)
+}
+
 // TokenScopesFromContext returns the scope list when the current request was
 // authenticated via a Bearer token; nil for session-based requests or
 // anonymous ones.

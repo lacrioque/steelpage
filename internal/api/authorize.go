@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/markusfluer/steelpage/internal/middleware"
@@ -9,7 +10,7 @@ import (
 	"github.com/markusfluer/steelpage/internal/users"
 )
 
-// authorize decides whether the request can perform `action` on `path`.
+// Authorize decides whether the caller can perform `action` on `path`.
 //
 // Semantics ("replace defaults"):
 //   - When at least one permission rule matches `path`, only those rules
@@ -21,13 +22,17 @@ import (
 //
 // Returns the user (may be nil), and the HTTP status to write on denial. A
 // status of 0 means "allowed".
-func (a *API) authorize(r *http.Request, path, action string) (*users.User, int) {
-	user := middleware.FromContext(r.Context())
+//
+// Identity is read from ctx (set by the Identity middleware, or by
+// middleware.WithIdentity for non-HTTP callers such as MCP tools), so REST
+// and MCP share this exact code path.
+func (a *API) Authorize(ctx context.Context, path, action string) (*users.User, int) {
+	user := middleware.FromContext(ctx)
 
 	// Bearer token? Check scopes first — a token-authenticated request
 	// can do strictly less than the owner can. We still run the permission
 	// check below so the owner's path rules are honored.
-	if scopes := middleware.TokenScopesFromContext(r.Context()); scopes != nil {
+	if scopes := middleware.TokenScopesFromContext(ctx); scopes != nil {
 		if !tokens.AllowsAction(scopes, action, path) {
 			return user, http.StatusForbidden
 		}
@@ -52,7 +57,7 @@ func (a *API) authorize(r *http.Request, path, action string) (*users.User, int)
 	// Fallback path — no rule mentions this document.
 	switch action {
 	case permissions.PermRead:
-		if a.cfg().Auth.AllowAnonymousRead {
+		if a.LiveCfg().Auth.AllowAnonymousRead {
 			return user, 0
 		}
 		if user == nil {

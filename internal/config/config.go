@@ -16,6 +16,7 @@ type Config struct {
 	Search   Search   `yaml:"search"`
 	Frontend Frontend `yaml:"frontend"`
 	Email    Email    `yaml:"email"`
+	MCP      MCP      `yaml:"mcp"`
 }
 
 type Repo struct {
@@ -93,6 +94,13 @@ func (e Email) Enabled() bool {
 	return e.Host != "" && e.FromAddress != ""
 }
 
+// MCP configures the Model Context Protocol endpoints (/mcp, /mcp/rest).
+// They expose nothing the REST API doesn't, under the same authorization,
+// so Enabled defaults to true; it is live-editable as a kill switch.
+type MCP struct {
+	Enabled bool `yaml:"enabled"`
+}
+
 func Load(path string) (*Config, error) {
 	body, err := os.ReadFile(path)
 	if err != nil {
@@ -107,6 +115,7 @@ func Load(path string) (*Config, error) {
 				Secure: true,
 			},
 		},
+		MCP: MCP{Enabled: true},
 	}
 	if err := yaml.Unmarshal(body, &cfg); err != nil {
 		return nil, fmt.Errorf("parse config %s: %w", path, err)

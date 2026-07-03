@@ -27,6 +27,7 @@ type SyncResult struct {
 	Pushed        bool     `json:"pushed"`
 	Conflict      bool     `json:"conflict"`
 	RebaseAborted bool     `json:"rebase_aborted"`
+	RemoteChanged bool     `json:"remote_changed,omitempty"`
 	Error         string   `json:"error,omitempty"`
 	Files         []string `json:"files,omitempty"`
 	At            string   `json:"at"`
@@ -57,6 +58,17 @@ func (s *Store) run(args ...string) ([]byte, error) {
 		return nil, fmt.Errorf("git %s: %w: %s", strings.Join(args, " "), err, strings.TrimSpace(stderr.String()))
 	}
 	return stdout.Bytes(), nil
+}
+
+// HeadCommit returns the SHA of HEAD. A rebase onto an unchanged upstream
+// keeps the SHA, so a changed HeadCommit across a pull means remote commits
+// were actually incorporated.
+func (s *Store) HeadCommit() (string, error) {
+	out, err := s.run("rev-parse", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
 }
 
 func (s *Store) HeadSHA(docPath string) (string, error) {
@@ -330,6 +342,7 @@ func (s *Store) Sync(remote string) SyncResult {
 		res.Error = fmt.Sprintf("remote %q not configured", remote)
 		return res
 	}
+	headBefore, _ := s.HeadCommit()
 	conflicts, err := s.PullRebase(remote)
 	if err != nil {
 		res.Error = err.Error()
@@ -342,6 +355,9 @@ func (s *Store) Sync(remote string) SyncResult {
 		return res
 	}
 	res.Pulled = true
+	if headAfter, herr := s.HeadCommit(); herr == nil && headBefore != "" && headBefore != headAfter {
+		res.RemoteChanged = true
+	}
 	if err := s.Push(remote); err != nil {
 		res.Error = err.Error()
 		return res

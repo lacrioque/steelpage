@@ -263,6 +263,9 @@ render:
 search:
   engine: sqlite_fts5
 
+mcp:
+  enabled: true   # MCP endpoint at /mcp (+ /mcp/rest); live kill switch under /admin → Settings
+
 frontend:
   embedded_dist: ""
 
