@@ -135,6 +135,12 @@ func (s *Service) Login(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusUnauthorized, "invalid credentials")
 		return
 	}
+	// Machine identities are token-only, never a login target — defense in
+	// depth on top of them having no email/password.
+	if u.Role == users.RoleMachine {
+		writeError(w, http.StatusUnauthorized, "invalid credentials")
+		return
+	}
 	if u.PasswordHash == "" {
 		writeError(w, http.StatusUnauthorized, "this account has no password set")
 		return

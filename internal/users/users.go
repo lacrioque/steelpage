@@ -11,6 +11,10 @@ import (
 const (
 	RoleAdmin = "admin"
 	RoleUser  = "user"
+	// RoleMachine marks admin-managed service identities (AI bots). They own
+	// API tokens but can never log in; validateRole deliberately excludes it
+	// so admin PATCH can't move users in or out of the machine lifecycle.
+	RoleMachine = "machine"
 )
 
 var (
@@ -137,6 +141,48 @@ func (s *Store) CreateLocal(email, displayName, passwordHash, role string) (*Use
 		return nil, err
 	}
 	return s.GetByID(id)
+}
+
+// CreateMachine inserts a service identity: no email, no password, role
+// 'machine'. Only owns API tokens and comment authorship.
+func (s *Store) CreateMachine(displayName string) (*User, error) {
+	if err := validateDisplayName(displayName); err != nil {
+		return nil, err
+	}
+	displayClean := strings.TrimSpace(displayName)
+	now := time.Now().UTC().Format(time.RFC3339)
+
+	res, err := s.DB.Exec(
+		`INSERT INTO users(display_name, role, created_at) VALUES(?, ?, ?)`,
+		displayClean, RoleMachine, now,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("insert machine user: %w", err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return nil, err
+	}
+	return s.GetByID(id)
+}
+
+// DeleteMachine removes a machine user — unless it authored comments:
+// comments.author_id has no ON DELETE clause, so the row must survive to
+// keep authorship intact (its tokens are revoked/cascaded regardless).
+// Returns whether the row was actually deleted. Only role='machine' rows
+// are ever touched.
+func (s *Store) DeleteMachine(id int64) (bool, error) {
+	res, err := s.DB.Exec(`
+		DELETE FROM users
+		WHERE id = ? AND role = ?
+		  AND NOT EXISTS (SELECT 1 FROM comments WHERE author_id = users.id)`,
+		id, RoleMachine,
+	)
+	if err != nil {
+		return false, err
+	}
+	n, _ := res.RowsAffected()
+	return n > 0, nil
 }
 
 // FindByEmail returns ErrNotFound when no row exists.
@@ -454,9 +500,10 @@ func boolToInt(b bool) int64 {
 
 // Mentionable lists every user as an @mention candidate (id + display name
 // only). Serves both the autocomplete endpoint and server-side mention
-// resolution on comment save.
+// resolution on comment save. Machine identities are excluded — they never
+// read notifications, so mentioning them is pure noise.
 func (s *Store) Mentionable() ([]Mention, error) {
-	rows, err := s.DB.Query(`SELECT id, display_name FROM users ORDER BY display_name ASC, id ASC`)
+	rows, err := s.DB.Query(`SELECT id, display_name FROM users WHERE role != 'machine' ORDER BY display_name ASC, id ASC`)
 	if err != nil {
 		return nil, err
 	}

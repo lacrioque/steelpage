@@ -26,6 +26,10 @@ func (a *API) AdminListUsers(w http.ResponseWriter, _ *http.Request) {
 	}
 	out := make([]adminUser, 0, len(list))
 	for _, u := range list {
+		// Machine identities are managed under /admin/machine-tokens only.
+		if u.Role == users.RoleMachine {
+			continue
+		}
 		names, _ := a.Groups.GroupsOf(u.ID)
 		if names == nil {
 			names = []string{}
@@ -44,6 +48,12 @@ func (a *API) AdminPatchUser(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if a.isMachineUser(id) {
+		// PATCHing role on a hidden machine identity would convert it into a
+		// person user while its token lives on — keep them out of reach here.
+		writeError(w, http.StatusNotFound, "user not found")
 		return
 	}
 	var req patchUserRequest
@@ -76,12 +86,28 @@ func (a *API) AdminPatchUser(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, u)
 }
 
+// isMachineUser reports whether id resolves to a role='machine' row. Used by
+// the per-user admin endpoints to hide machine identities entirely. Fails
+// closed: a lookup error (other than not-found) counts as machine so a
+// transient DB error can't disable the guard.
+func (a *API) isMachineUser(id int64) bool {
+	u, err := a.Users.GetByID(id)
+	if err != nil {
+		return !errors.Is(err, users.ErrNotFound)
+	}
+	return u.Role == users.RoleMachine
+}
+
 // AdminDisableUserMFA is the emergency unlock for users who lost their
 // authenticator app. Admins-only. Strips totp_secret + totp_enabled_at.
 func (a *API) AdminDisableUserMFA(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if a.isMachineUser(id) {
+		writeError(w, http.StatusNotFound, "user not found")
 		return
 	}
 	if err := a.Users.DisableTOTP(id); err != nil {
