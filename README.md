@@ -19,8 +19,9 @@ Markdown is the source of truth. Git records every edit. SQLite holds the live c
 - **Auth** — local accounts (bcrypt), generic OIDC, TOTP MFA, cookie sessions backed by SQLite. Email verification + password reset over SMTP.
 - **Path-based permissions** with doublestar globs. Subject types: `anonymous`, `authenticated`, `role:<role>`, `group:<name>`, `user:<id>`. Permissions imply lower ones (`write > comment > read`).
 - **API tokens** — long-lived bearer tokens (read/comment/write, optionally path-scoped) for headless agents and per-page share links.
+- **MCP server + machine tokens** — a built-in MCP endpoint at `/mcp` (plain-JSON twin at `/mcp/rest`) exposing search, document fetch, similar pages, tree, and line-anchored commenting to AI clients, plus admin-minted machine tokens for service bots. See [docs/ai-integration.md](docs/ai-integration.md).
 - **Live config editing** — admins edit runtime settings from `/admin → Settings`; subsystems hot-reload without restart. YAML stays the cold-start source of truth.
-- **Bot-ready output** at `/docs/<path>?botready=1` for enriched Markdown, or `?botready=1&format=json` for structured JSON consumption by AI agents.
+- **Bot-ready output** at `/docs/<path>?botready=1` for enriched Markdown, or `?botready=1&format=json` for structured JSON consumption by AI agents — see [docs/ai-integration.md](docs/ai-integration.md) for the full AI integration guide.
 - **i18n** — English and German included.
 
 ---
@@ -119,6 +120,9 @@ render:
   mermaid: true
   code_highlighting: true
   sanitize_html: true
+
+mcp:
+  enabled: true                 # MCP endpoint at /mcp; live kill switch in /admin → Settings
 ```
 
 ### Restart-required vs live-editable
