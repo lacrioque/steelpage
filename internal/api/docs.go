@@ -38,7 +38,7 @@ type putDocRequest struct {
 func (a *API) GetDoc(w http.ResponseWriter, r *http.Request) {
 	docPath := chi.URLParam(r, "*")
 
-	if _, status := a.authorize(r, docPath, "read"); !denyOrContinue(w, status) {
+	if _, status := a.Authorize(r.Context(), docPath, "read"); !denyOrContinue(w, status) {
 		return
 	}
 
@@ -77,7 +77,7 @@ func (a *API) GetDoc(w http.ResponseWriter, r *http.Request) {
 func (a *API) PutDoc(w http.ResponseWriter, r *http.Request) {
 	docPath := chi.URLParam(r, "*")
 
-	user, status := a.authorize(r, docPath, "write")
+	user, status := a.Authorize(r.Context(), docPath, "write")
 	if !denyOrContinue(w, status) {
 		return
 	}
@@ -92,7 +92,7 @@ func (a *API) PutDoc(w http.ResponseWriter, r *http.Request) {
 	lk.Lock()
 	defer lk.Unlock()
 
-	live := a.cfg()
+	live := a.LiveCfg()
 	authorName := live.Repo.CommitAuthorName
 	authorEmail := live.Repo.CommitAuthorEmail
 	if user != nil {
@@ -139,17 +139,7 @@ func (a *API) PutDoc(w http.ResponseWriter, r *http.Request) {
 	// runs `pull --rebase` first so concurrent remote changes don't get
 	// stomped; conflicts halt the push and surface in /admin → Settings.
 	if live.Repo.AutoPush && a.Git.HasRemote(live.Repo.PushRemote) {
-		git := a.Git
-		remote := live.Repo.PushRemote
-		go func() {
-			result := git.Sync(remote)
-			if result.Error != "" {
-				logError("git sync", fmt.Errorf("%s", result.Error))
-			}
-			if result.Conflict {
-				logError("git sync conflict", fmt.Errorf("conflict on %v", result.Files))
-			}
-		}()
+		a.syncAndReindex(live.Repo.PushRemote)
 	}
 
 	if err := a.Comments.MarkPath(docPath, newSHA, splitLines(req.Markdown)); err != nil {
@@ -171,7 +161,7 @@ func (a *API) PutDoc(w http.ResponseWriter, r *http.Request) {
 
 func (a *API) BotReady(w http.ResponseWriter, r *http.Request) {
 	docPath := chi.URLParam(r, "*")
-	if _, status := a.authorize(r, docPath, "read"); !denyOrContinue(w, status) {
+	if _, status := a.Authorize(r.Context(), docPath, "read"); !denyOrContinue(w, status) {
 		return
 	}
 	raw, err := docs.Load(a.Cfg.Repo.Path, docPath)
@@ -205,46 +195,60 @@ func (a *API) BotReady(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "text/markdown; charset=utf-8")
-	writeBotReadyMarkdown(w, resp, openComments)
+	fmt.Fprint(w, BotReadyMarkdown(resp, openComments))
 }
 
-func writeBotReadyMarkdown(w http.ResponseWriter, resp *DocumentResponse, allComments []*comments.Comment) {
-	fmt.Fprintf(w, "# %s\n\n", resp.Title)
-	fmt.Fprintf(w, "Path: %s\n", resp.Path)
+// BuildDocument loads a document from disk and renders the full response.
+// Exported so the MCP layer shares the REST code path.
+func (a *API) BuildDocument(docPath string) (*DocumentResponse, error) {
+	raw, err := docs.Load(a.Cfg.Repo.Path, docPath)
+	if err != nil {
+		return nil, err
+	}
+	return a.buildResponse(docPath, raw)
+}
+
+// BotReadyMarkdown renders the enriched bot-ready flat-text form of a
+// document. Shared by the ?botready=1 handler and the MCP get_document tool.
+func BotReadyMarkdown(resp *DocumentResponse, allComments []*comments.Comment) string {
+	var w strings.Builder
+	fmt.Fprintf(&w, "# %s\n\n", resp.Title)
+	fmt.Fprintf(&w, "Path: %s\n", resp.Path)
 	if resp.Updated != "" {
-		fmt.Fprintf(w, "Updated: %s\n", resp.Updated)
+		fmt.Fprintf(&w, "Updated: %s\n", resp.Updated)
 	}
 	if resp.SHA != "" {
-		fmt.Fprintf(w, "Git SHA: %s\n", resp.SHA)
+		fmt.Fprintf(&w, "Git SHA: %s\n", resp.SHA)
 	}
 	if version, ok := resp.Frontmatter["version"]; ok && version != nil {
-		fmt.Fprintf(w, "Version: %v\n", version)
+		fmt.Fprintf(&w, "Version: %v\n", version)
 	}
 	if tags, ok := resp.Frontmatter["tags"]; ok {
-		fmt.Fprintf(w, "Tags: %s\n", joinTags(tags))
+		fmt.Fprintf(&w, "Tags: %s\n", joinTags(tags))
 	}
-	fmt.Fprintln(w)
+	fmt.Fprintln(&w)
 
-	fmt.Fprintln(w, "---")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, "## Content")
-	fmt.Fprintln(w)
-	fmt.Fprintln(w, resp.Markdown)
+	fmt.Fprintln(&w, "---")
+	fmt.Fprintln(&w)
+	fmt.Fprintln(&w, "## Content")
+	fmt.Fprintln(&w)
+	fmt.Fprintln(&w, resp.Markdown)
 
-	open := filterActive(allComments)
+	open := FilterActive(allComments)
 	if len(open) > 0 {
-		fmt.Fprintln(w)
-		fmt.Fprintln(w, "---")
-		fmt.Fprintln(w)
-		fmt.Fprintf(w, "## Open Comments (%d)\n\n", len(open))
+		fmt.Fprintln(&w)
+		fmt.Fprintln(&w, "---")
+		fmt.Fprintln(&w)
+		fmt.Fprintf(&w, "## Open Comments (%d)\n\n", len(open))
 		for _, c := range open {
 			tag := "open"
 			if c.Status == comments.StatusRelocated {
 				tag = "relocated"
 			}
-			fmt.Fprintf(w, "- Line %d (%s, %s): %s\n", c.LineStart, c.Author.DisplayName, tag, oneLine(c.Body))
+			fmt.Fprintf(&w, "- Line %d (%s, %s): %s\n", c.LineStart, c.Author.DisplayName, tag, oneLine(c.Body))
 		}
 	}
+	return w.String()
 }
 
 func joinTags(v any) string {
@@ -269,7 +273,9 @@ func oneLine(s string) string {
 	return strings.TrimSpace(s)
 }
 
-func filterActive(list []*comments.Comment) []*comments.Comment {
+// FilterActive returns only comments that are still anchored (open or
+// relocated). Exported so the MCP layer shares the REST behavior.
+func FilterActive(list []*comments.Comment) []*comments.Comment {
 	out := make([]*comments.Comment, 0, len(list))
 	for _, c := range list {
 		if c.Status == comments.StatusOpen || c.Status == comments.StatusRelocated {

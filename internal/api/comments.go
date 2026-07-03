@@ -31,7 +31,7 @@ func (a *API) ListComments(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "path query parameter required")
 		return
 	}
-	if _, status := a.authorize(r, path, "read"); !denyOrContinue(w, status) {
+	if _, status := a.Authorize(r.Context(), path, "read"); !denyOrContinue(w, status) {
 		return
 	}
 	list, err := a.Comments.ListByPath(path)
@@ -52,7 +52,7 @@ func (a *API) CreateComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid JSON body")
 		return
 	}
-	u, status := a.authorize(r, req.Path, "comment")
+	u, status := a.Authorize(r.Context(), req.Path, "comment")
 	if !denyOrContinue(w, status) {
 		return
 	}
@@ -81,7 +81,7 @@ func (a *API) CreateComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to create comment")
 		return
 	}
-	go a.notifyForComment(u, c, "", false)
+	go a.NotifyForComment(u, c, "", false)
 	writeJSON(w, http.StatusCreated, c)
 }
 
@@ -98,7 +98,7 @@ func (a *API) UpdateComment(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusNotFound, "comment not found")
 		return
 	}
-	u, status := a.authorize(r, existing.Path, "comment")
+	u, status := a.Authorize(r.Context(), existing.Path, "comment")
 	if !denyOrContinue(w, status) {
 		return
 	}
@@ -125,7 +125,7 @@ func (a *API) UpdateComment(w http.ResponseWriter, r *http.Request) {
 	// Re-notify only when the body actually changed (status flips don't ping),
 	// and only for mentions that weren't in the previous body.
 	if u != nil && req.Body != nil && *req.Body != existing.Body {
-		go a.notifyForComment(u, c, existing.Body, true)
+		go a.NotifyForComment(u, c, existing.Body, true)
 	}
 	writeJSON(w, http.StatusOK, c)
 }

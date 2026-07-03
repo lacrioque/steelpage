@@ -17,6 +17,7 @@ func (a *API) AdminGitPull(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusBadRequest, "remote not configured")
 		return
 	}
+	headBefore, _ := a.Git.HeadCommit()
 	conflicts, err := a.Git.PullRebase(a.Cfg.Repo.PushRemote)
 	resp := map[string]any{}
 	if err != nil {
@@ -27,6 +28,13 @@ func (a *API) AdminGitPull(w http.ResponseWriter, _ *http.Request) {
 		resp["files"] = conflicts
 	} else {
 		resp["pulled"] = err == nil
+	}
+	// Reindex only after a clean pull that actually moved HEAD — a paused
+	// rebase must never be indexed (conflict markers, detached mid-state).
+	if err == nil && len(conflicts) == 0 && headBefore != "" {
+		if headAfter, herr := a.Git.HeadCommit(); herr == nil && headAfter != headBefore {
+			go a.reindexAll()
+		}
 	}
 	resp["status"] = a.Git.SnapshotStatus(a.Cfg.Repo.PushRemote)
 	writeJSON(w, http.StatusOK, resp)
@@ -40,6 +48,9 @@ func (a *API) AdminGitPush(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	result := a.Git.Sync(a.Cfg.Repo.PushRemote)
+	if result.Pulled && result.RemoteChanged {
+		go a.reindexAll()
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"sync":   result,
 		"status": a.Git.SnapshotStatus(a.Cfg.Repo.PushRemote),

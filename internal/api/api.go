@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"sync"
+	"sync/atomic"
 
 	"github.com/alexedwards/scs/v2"
 
@@ -44,6 +45,8 @@ type API struct {
 
 	saveMu  sync.Mutex
 	saveLks map[string]*sync.Mutex
+
+	reindexing atomic.Bool
 }
 
 func New(
@@ -83,10 +86,10 @@ func New(
 	}
 }
 
-// cfg returns the current effective config (YAML + overrides). Handlers that
-// need live values should prefer this over a.Cfg, which is the immutable
-// cold-start baseline.
-func (a *API) cfg() *config.Config {
+// LiveCfg returns the current effective config (YAML + overrides). Callers
+// that need live values should prefer this over a.Cfg, which is the immutable
+// cold-start baseline. Exported for the MCP layer.
+func (a *API) LiveCfg() *config.Config {
 	return a.Configsvc.Snapshot()
 }
 

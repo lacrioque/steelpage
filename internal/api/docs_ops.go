@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -19,7 +18,7 @@ import (
 func (a *API) DeleteDoc(w http.ResponseWriter, r *http.Request) {
 	docPath := chi.URLParam(r, "*")
 
-	user, status := a.authorize(r, docPath, "write")
+	user, status := a.Authorize(r.Context(), docPath, "write")
 	if !denyOrContinue(w, status) {
 		return
 	}
@@ -37,7 +36,7 @@ func (a *API) DeleteDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authorName, authorEmail := authorFor(user, a.cfg())
+	authorName, authorEmail := authorFor(user, a.LiveCfg())
 	if err := a.Git.RemoveFile(docPath, "docs: delete "+docPath, authorName, authorEmail); err != nil {
 		logError("git rm", err)
 		writeError(w, http.StatusInternalServerError, "failed to delete file")
@@ -72,10 +71,10 @@ func (a *API) MoveDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, status := a.authorize(r, req.From, "write"); !denyOrContinue(w, status) {
+	if _, status := a.Authorize(r.Context(), req.From, "write"); !denyOrContinue(w, status) {
 		return
 	}
-	user, status := a.authorize(r, req.To, "write")
+	user, status := a.Authorize(r.Context(), req.To, "write")
 	if !denyOrContinue(w, status) {
 		return
 	}
@@ -112,7 +111,7 @@ func (a *API) MoveDoc(w http.ResponseWriter, r *http.Request) {
 	}
 	_ = fromAbs
 
-	authorName, authorEmail := authorFor(user, a.cfg())
+	authorName, authorEmail := authorFor(user, a.LiveCfg())
 	msg := "docs: move " + req.From + " -> " + req.To
 	newSHA, err := a.Git.MoveFile(req.From, req.To, msg, authorName, authorEmail)
 	if err != nil {
@@ -156,10 +155,10 @@ func (a *API) CopyDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if _, status := a.authorize(r, req.From, "read"); !denyOrContinue(w, status) {
+	if _, status := a.Authorize(r.Context(), req.From, "read"); !denyOrContinue(w, status) {
 		return
 	}
-	user, status := a.authorize(r, req.To, "write")
+	user, status := a.Authorize(r.Context(), req.To, "write")
 	if !denyOrContinue(w, status) {
 		return
 	}
@@ -186,7 +185,7 @@ func (a *API) CopyDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	authorName, authorEmail := authorFor(user, a.cfg())
+	authorName, authorEmail := authorFor(user, a.LiveCfg())
 
 	// Strip source frontmatter, give the copy a fresh one.
 	_, body, _ := frontmatter.Split(srcRaw)
@@ -255,22 +254,12 @@ func authorFor(user *users.User, cfg *config.Config) (string, string) {
 // maybeAutoSync mirrors the auto-push branch from PutDoc so move/copy/delete
 // also fan their commits out to the remote when enabled.
 func (a *API) maybeAutoSync() {
-	live := a.cfg()
+	live := a.LiveCfg()
 	if !live.Repo.AutoPush {
 		return
 	}
 	if !a.Git.HasRemote(live.Repo.PushRemote) {
 		return
 	}
-	git := a.Git
-	remote := live.Repo.PushRemote
-	go func() {
-		result := git.Sync(remote)
-		if result.Error != "" {
-			logError("git sync", fmt.Errorf("%s", result.Error))
-		}
-		if result.Conflict {
-			logError("git sync conflict", fmt.Errorf("conflict on %v", result.Files))
-		}
-	}()
+	a.syncAndReindex(live.Repo.PushRemote)
 }

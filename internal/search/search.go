@@ -66,12 +66,17 @@ func (s *Store) Search(q string, limit int) ([]Result, error) {
 // quotes. Returns a single OR-joined FTS5 string, so "foo bar" → '"foo" OR "bar"'.
 // Empty input returns "".
 func sanitize(q string) string {
-	parts := strings.Fields(q)
-	if len(parts) == 0 {
+	return quoteTokens(strings.Fields(q))
+}
+
+// quoteTokens wraps each token in double quotes and OR-joins them into a
+// forgiving FTS5 MATCH expression. Empty input returns "".
+func quoteTokens(tokens []string) string {
+	if len(tokens) == 0 {
 		return ""
 	}
-	out := make([]string, 0, len(parts))
-	for _, p := range parts {
+	out := make([]string, 0, len(tokens))
+	for _, p := range tokens {
 		// FTS5 strings can contain anything except an embedded double quote,
 		// which is escaped by doubling.
 		escaped := strings.ReplaceAll(p, `"`, `""`)

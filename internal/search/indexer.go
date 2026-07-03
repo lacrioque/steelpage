@@ -31,6 +31,7 @@ func (i *Indexer) IndexAll(repoPath string) (int, error) {
 		return 0, err
 	}
 	count := 0
+	walked := map[string]bool{}
 	err = filepath.WalkDir(rootAbs, func(path string, d fs.DirEntry, werr error) error {
 		if werr != nil {
 			return werr
@@ -50,6 +51,9 @@ func (i *Indexer) IndexAll(repoPath string) (int, error) {
 			return rerr
 		}
 		rel = filepath.ToSlash(rel)
+		// Marked before the read so a transient read error can't prune a
+		// doc that still exists on disk.
+		walked[rel] = true
 		raw, rerr := os.ReadFile(path)
 		if rerr != nil {
 			log.Printf("search: read %s: %v", rel, rerr)
@@ -64,7 +68,37 @@ func (i *Indexer) IndexAll(repoPath string) (int, error) {
 	if err != nil {
 		return count, err
 	}
+	// Prune index rows for docs deleted while the server was down.
+	stale, err := i.stalePaths(walked)
+	if err != nil {
+		return count, err
+	}
+	for _, p := range stale {
+		if err := i.Remove(p); err != nil {
+			log.Printf("search: prune %s: %v", p, err)
+		}
+	}
 	return count, nil
+}
+
+// stalePaths returns indexed paths that were not seen by the walk.
+func (i *Indexer) stalePaths(walked map[string]bool) ([]string, error) {
+	rows, err := i.DB.Query(`SELECT path FROM documents`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var stale []string
+	for rows.Next() {
+		var p string
+		if err := rows.Scan(&p); err != nil {
+			return nil, err
+		}
+		if !walked[p] {
+			stale = append(stale, p)
+		}
+	}
+	return stale, rows.Err()
 }
 
 // IndexOne re-indexes a single document. `body` is the markdown body the
@@ -114,6 +148,16 @@ func (i *Indexer) Remove(docPath string) error {
 		_ = tx.Rollback()
 		return err
 	}
+	// Drop the doc's outbound links and tags. Inbound doc_links rows stay —
+	// they still exist in the source documents.
+	if _, err := tx.Exec(`DELETE FROM doc_links WHERE src_path = ?`, docPath); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
+	if _, err := tx.Exec(`DELETE FROM doc_tags WHERE path = ?`, docPath); err != nil {
+		_ = tx.Rollback()
+		return err
+	}
 	return tx.Commit()
 }
 
@@ -155,6 +199,29 @@ func (i *Indexer) write(docPath string, fm map[string]any, body string) error {
 	); err != nil {
 		_ = tx.Rollback()
 		return fmt.Errorf("insert fts row: %w", err)
+	}
+
+	// Link graph + tag rows for the related-pages engine. Delete + insert
+	// keeps both in sync with the doc within the same transaction.
+	if _, err := tx.Exec(`DELETE FROM doc_links WHERE src_path = ?`, docPath); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("delete doc_links: %w", err)
+	}
+	for _, dst := range ExtractLinks(docPath, []byte(body)) {
+		if _, err := tx.Exec(`INSERT OR IGNORE INTO doc_links(src_path, dst_path) VALUES(?, ?)`, docPath, dst); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("insert doc_links: %w", err)
+		}
+	}
+	if _, err := tx.Exec(`DELETE FROM doc_tags WHERE path = ?`, docPath); err != nil {
+		_ = tx.Rollback()
+		return fmt.Errorf("delete doc_tags: %w", err)
+	}
+	for _, tag := range tagListFromFrontmatter(fm) {
+		if _, err := tx.Exec(`INSERT OR IGNORE INTO doc_tags(path, tag) VALUES(?, ?)`, docPath, tag); err != nil {
+			_ = tx.Rollback()
+			return fmt.Errorf("insert doc_tags: %w", err)
+		}
 	}
 
 	return tx.Commit()

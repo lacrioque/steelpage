@@ -74,6 +74,40 @@ func tagsFromFrontmatter(fm map[string]any) string {
 	}
 }
 
+// tagListFromFrontmatter returns the individual tags from fm["tags"],
+// trimmed, lowercased (case-insensitive joins in doc_tags) and deduped in
+// order. It must be derived from the frontmatter value — never by splitting
+// the space-joined Extracted.Tags string, which would fracture multi-word
+// tags like "machine learning".
+func tagListFromFrontmatter(fm map[string]any) []string {
+	v, ok := fm["tags"]
+	if !ok || v == nil {
+		return nil
+	}
+	var raw []string
+	switch t := v.(type) {
+	case []any:
+		for _, item := range t {
+			if s, ok := item.(string); ok {
+				raw = append(raw, s)
+			}
+		}
+	case string:
+		raw = []string{t}
+	}
+	seen := map[string]bool{}
+	out := make([]string, 0, len(raw))
+	for _, s := range raw {
+		tag := strings.ToLower(strings.TrimSpace(s))
+		if tag == "" || seen[tag] {
+			continue
+		}
+		seen[tag] = true
+		out = append(out, tag)
+	}
+	return out
+}
+
 func firstH1(body string) string {
 	for _, line := range strings.Split(body, "\n") {
 		trimmed := strings.TrimSpace(line)
