@@ -141,6 +141,13 @@ var allFields = []Field{
 		currentValue: func(cfg *config.Config) any { return cfg.Search.Engine },
 	},
 
+	// MCP — checked per-request by the /mcp handlers, so live-editable safely.
+	{
+		Key: "mcp.enabled", Type: "bool", Group: "MCP", Order: 1,
+		applyTo:      func(cfg *config.Config, v json.RawMessage) error { return json.Unmarshal(v, &cfg.MCP.Enabled) },
+		currentValue: func(cfg *config.Config) any { return cfg.MCP.Enabled },
+	},
+
 	// Email — full hot-reload via the mailer subsystem subscriber.
 	{
 		Key: "email.host", Type: "string", Group: "Email", Order: 1,

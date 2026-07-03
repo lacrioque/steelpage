@@ -11,6 +11,7 @@ import (
 	"github.com/markusfluer/steelpage/internal/api"
 	"github.com/markusfluer/steelpage/internal/config"
 	"github.com/markusfluer/steelpage/internal/groups"
+	"github.com/markusfluer/steelpage/internal/mcpapi"
 	"github.com/markusfluer/steelpage/internal/middleware"
 	"github.com/markusfluer/steelpage/internal/static"
 	"github.com/markusfluer/steelpage/internal/tokens"
@@ -61,6 +62,7 @@ func New(
 		r.Get("/tree", a.Tree)
 		r.Get("/docs/*", a.GetDoc)
 		r.Get("/docs-history/*", a.GetDocHistory)
+		r.Get("/docs-similar/*", a.SimilarDocs)
 		r.Get("/search", a.Search)
 		r.Get("/comments", a.ListComments)
 		r.Post("/render", a.Render)
@@ -90,6 +92,9 @@ func New(
 			r.Delete("/admin/groups/{id}", a.AdminDeleteGroup)
 			r.Post("/admin/groups/{id}/members", a.AdminAddMember)
 			r.Delete("/admin/groups/{id}/members/{user_id}", a.AdminRemoveMember)
+			r.Get("/admin/machine-tokens", a.AdminListMachineTokens)
+			r.Post("/admin/machine-tokens", a.AdminCreateMachineToken)
+			r.Delete("/admin/machine-tokens/{id}", a.AdminDeleteMachineToken)
 			r.Get("/admin/permissions", a.AdminListPermissions)
 			r.Post("/admin/permissions", a.AdminCreatePermission)
 			r.Delete("/admin/permissions/{id}", a.AdminDeletePermission)
@@ -107,6 +112,12 @@ func New(
 			r.Get("/admin/config/export", a.AdminConfigExport)
 		})
 	})
+
+	// MCP endpoints for AI systems. Inside the Identity chain so Bearer
+	// machine tokens resolve through the one existing identity path; session
+	// cookies are deliberately ignored by mcpapi (CSRF).
+	r.Handle("/mcp", mcpapi.Handler(a, false))     // SSE stream responses
+	r.Handle("/mcp/rest", mcpapi.Handler(a, true)) // plain JSON responses
 
 	staticHandler := static.Handler(dist)
 
