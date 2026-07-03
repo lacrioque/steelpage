@@ -383,6 +383,7 @@
       <RadioButton labelText={$_("account.token_kind_agent")} value="agent" />
       <RadioButton labelText={$_("account.token_kind_share")} value="share" />
     </RadioButtonGroup>
+    <p class="dim" style="margin-top:0.5rem">{$_("account.token_kind_machine_hint")}</p>
   </div>
 
   {#if createKind === "agent"}
